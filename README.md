@@ -24,3 +24,17 @@ To use these functions, simply include the Julia file in your project and call t
 These functions rely on the SparseArrays package for handling sparse matrices. Make sure to have this package installed before using the functions.
 
 ## Operators
+
+### Overview
+This Julia file contains functions to create various operators including the gradient, divergence, and matrix calculations.
+
+### Functions
+Gradient Operator : `compute_grad_operator`
+The gradient operator calculates the gradient of a scalar field or function. The `compute_gradient_operator` function in this file takes input scalar fields and computes their gradients.
+
+Divergence Operator `compute_divergence`
+The divergence operator calculates the divergence of a vector field. The `compute_divergence_operator` function in this file takes input vector fields and computes their divergences.
+
+Matrix Calculation
+This file also contains functions to perform matrix calculations relevant to cut cells computations. These functions are used to build the G, H, H^T, -(G^T+H^T) matrices.
+
