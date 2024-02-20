@@ -181,15 +181,13 @@ println("Identity Matrix:")
 println(I_sparse)
 
 function kronecker_product_sparse(A::SparseMatrixCSC, B::SparseMatrixCSC)
-    # Compute the Kronecker product using Kronecker.jl
+    # Compute the Kronecker product
     C = kron(A, B)
     
     return C
 end
 
 # Test the function
-A = sparse([1 0; 0 1])
-B = sparse([2 0; 0 2])
 C_sparse = kronecker_product_sparse(I_sparse, D_sparse)
 println("Kronecker Product of A and B:")
 println(C_sparse)
