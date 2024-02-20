@@ -4,7 +4,7 @@
 
 ## Cartesian Mesh
 
-## Matrix
+## Matrix.jl
 ### Introduction
 This Julia file provides functions to create elementary matrices commonly used in numerical computations, particularly in the cut-cell method. These matrices include backward and forward differentiation matrices, as well as backward and forward interpolation matrices.
 
@@ -23,7 +23,7 @@ To use these functions, simply include the Julia file in your project and call t
 ### Dependencies
 These functions rely on the SparseArrays package for handling sparse matrices. Make sure to have this package installed before using the functions.
 
-## Operators
+## Operators.jl
 
 ### Overview
 This Julia file contains functions to create various operators including the gradient, divergence, and matrix calculations.

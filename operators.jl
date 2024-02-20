@@ -1,9 +1,5 @@
 # Function to build the matrix G
-function build_matrix_G(nx::Int, ny::Int, Bx, By)
-    # Create backward differentiation matrices
-    Dx_minus = backward_differentiation_matrix_sparse(nx)
-    Dy_minus = backward_differentiation_matrix_sparse(ny)
-    
+function build_matrix_G(nx::Int, ny::Int, Dx_minus, Dy_minus, Bx, By)    
     # Compute matrix products
     Dx_minus_Bx = Dx_minus * Bx
     Dy_minus_By = Dy_minus * By
@@ -15,11 +11,7 @@ function build_matrix_G(nx::Int, ny::Int, Bx, By)
 end
 
 # Function to create the matrix H
-function build_matrix_H(nx::Int, ny::Int, Ax, Ay, Bx, By)
-    # Create backward differentiation matrices
-    Dx_minus = backward_differentiation_matrix_sparse(nx)
-    Dy_minus = backward_differentiation_matrix_sparse(ny)
-    
+function build_matrix_H(nx::Int, ny::Int, Dx_minus, Dy_minus, Ax, Ay, Bx, By)
     # Compute matrix products
     Ax_Dx_minus = Ax * Dx_minus
     Ay_Dy_minus = Ay * Dy_minus
@@ -37,11 +29,7 @@ function build_matrix_H(nx::Int, ny::Int, Ax, Ay, Bx, By)
 end
 
 # Function to create the matrix Ht
-function build_matrix_H_T(nx::Int, ny::Int, Ax, Ay, Bx, By)
-    # Create backward differentiation matrices
-    Dx_plus = forward_differentiation_matrix_sparse(nx)
-    Dy_plus = forward_differentiation_matrix_sparse(ny)
-    
+function build_matrix_H_T(nx::Int, ny::Int, Dx_plus, Dy_plus, Ax, Ay, Bx, By)
     # Compute matrix products
     Ax_Dx_plus = Ax * Dx_plus
     Ay_Dy_plus = Ay * Dy_plus
@@ -59,11 +47,7 @@ function build_matrix_H_T(nx::Int, ny::Int, Ax, Ay, Bx, By)
 end
 
 # Function to create the matrix -(G^T+H^T)
-function build_matrix_GTHT(nx::Int, ny::Int, Ax, Ay)
-    # Create backward differentiation matrices
-    Dx_plus = forward_differentiation_matrix_sparse(nx)
-    Dy_plus = forward_differentiation_matrix_sparse(ny)
-    
+function build_matrix_GTHT(nx::Int, ny::Int, Dx_plus, Dy_plus, Ax, Ay)
     # Compute matrix products
     Ax_Dx_plus = Ax * Dx_plus
     Ay_Dy_plus = Ay * Dy_plus
