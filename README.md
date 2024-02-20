@@ -2,7 +2,7 @@
 
 ## Geometry
 
-## Cartesian Mesh
+## Mesh
 
 ## Matrix.jl
 ### Introduction
