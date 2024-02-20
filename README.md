@@ -15,7 +15,7 @@ This Julia file provides functions to create elementary matrices commonly used i
 
 `backward_interpolation_matrix_sparse(n::Int)`: This function constructs a sparse matrix representing the backward interpolation matrix using the SparseMatrixCSC format. The matrix has 1 on the diagonal and 1 below the diagonal, with the last coefficient in the diagonal being 0.
 
-`forward_interpolation_matrix_sparse(n::Int): This function constructs a sparse matrix representing the forward interpolation matrix using the SparseMatrixCSC format. The matrix has 1 on the diagonal and 1 above the diagonal, with the last coefficient in the diagonal being 0.
+`forward_interpolation_matrix_sparse(n::Int)`: This function constructs a sparse matrix representing the forward interpolation matrix using the SparseMatrixCSC format. The matrix has 1 on the diagonal and 1 above the diagonal, with the last coefficient in the diagonal being 0.
 
 ### Usage
 To use these functions, simply include the Julia file in your project and call the desired function with the appropriate parameters. Each function returns a sparse matrix representing the requested elementary matrix.
