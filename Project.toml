@@ -1,0 +1,7 @@
+name = "CartesianCutCell"
+uuid = "8f461431-ace9-43ae-862a-da81e2dfef7b"
+authors = ["Fastaxx <Fastaxx@github.com>"]
+version = "0.1.0"
+
+[deps]
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
