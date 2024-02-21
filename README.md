@@ -64,4 +64,3 @@ This file contains functions for solving linear systems with different boundary 
 
 `solve_Ax_b_robin`: Solves the linear system with Robin boundary conditions by constructing the block matrix \(A\) using `construct_block_matrix_robin`, the right-hand side vector \(b\) using `construct_rhs_vector_robin`, and then solving the system \(Ax = b\). It returns the solution \(p_ω\) and \(p_γ\).
 
-These functions provide a comprehensive set of tools for solving linear systems associated with different boundary conditions encountered in fluid dynamics simulations. They enable efficient and accurate numerical computations in fluid flow problems.
