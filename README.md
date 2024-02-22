@@ -1,6 +1,26 @@
 # Cartesian Cut Cell method
 
-## Geometry
+## Geometry.jl
+### Overview
+
+This Julia file provides functions to create geometric moments matrices commonly used in numerical computations, particularly in the cut-cell method.
+
+### Functions
+
+This module provides functions to construct sparse diagonal matrices for various geometric properties:
+
+- **Ax Matrix:** The `build_diagonal_matrix_Ax` function constructs a sparse diagonal matrix representing cell heights along the x-direction.
+
+- **Ay Matrix:** The `build_diagonal_matrix_Ay` function constructs a sparse diagonal matrix representing cell widths along the y-direction.
+
+- **V Matrix:** The `build_diagonal_matrix_V` function constructs a sparse diagonal matrix representing volume information associated with each cell.
+
+- **Bx Matrix:** The `build_diagonal_matrix_Bx` function constructs a sparse diagonal matrix representing cell heights along the x-direction for the staggered cell
+
+- **By Matrix:** The `build_diagonal_matrix_By` function constructs a sparse diagonal matrix representing cell widths along the y-direction for the staggered cell
+
+- **W Matrix:** The `build_block_diagonal_W` function constructs a block diagonal matrix with Wx and Wy vectors placed on the diagonal blocks.
+
 
 ## Mesh
 
