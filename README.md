@@ -23,6 +23,16 @@ This module provides functions to construct sparse diagonal matrices for various
 
 
 ## Mesh
+### Overview 
+Mesh.jl is a Julia module designed to facilitate the generation of structured meshes and perform geometric computations on them. 
+
+### Functions
+Structured Mesh Generation: Mesh.jl offers functionality to generate structured meshes in 1D, 2D, and 3D spaces. 
+
+Geometric Computations: The module includes functions for performing geometric computations on meshes. Users can calculate distances, volumes, centroids, moments, and surface areas of geometric objects represented within the mesh.
+
+Integration: Mesh.jl provides integration functions that enable the computation of volumes and surface areas of geometric objects. 
+
 
 ## Matrix.jl
 ### Introduction
