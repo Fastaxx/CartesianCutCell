@@ -1,5 +1,6 @@
 using SparseArrays
 using LinearAlgebra
+using Test
 
 ## Dirichlet Condition
 # Function to solve G^T W^T G pw = Vfw - G^T W^T H gg - Poisson Equation Dirichlet
