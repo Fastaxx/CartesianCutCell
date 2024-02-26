@@ -5,6 +5,9 @@ using CartesianGeometry
 
 import Base: OneTo
 const T = Float64
+include("matrix.jl")
+include("operators.jl")
+include("solve.jl")
 
 function generate_mesh_and_geometry(levelset_type, radius, center, outer_bounds, inner_bounds)
     # Domain
@@ -68,22 +71,32 @@ function calculate_second_order_moments(halos, levelset, xy_collocated, bary)
 end
 
 
-
-outer = (-10:10, -10:10)
-inner = (-5:5, -5:5)
+outer = (-1:11, -1:19)
+inner = (1:9, 1:17)
 radius = 0.25
 center = (0.0, 0.0)
 levelset_type = HyperSphere{2, Float64}
-halos = ((1:8, 1:8),
-         (2:8, 2:8))
+halos = ((-1:10, -1:18),
+(0:10, 0:18))
 
 xy_collocated, levelset = generate_mesh_and_geometry(levelset_type, radius, center, outer, inner)
 
+nx = length(xy_collocated[1])
+ny = length(xy_collocated[2])
 # -1 : =0 (interface)
 # 0 : >0 (inside)
 # 1 : <0 (outside)
 
 v_diag, ax_diag, ay_diag, bary = calculate_first_order_moments(halos, levelset, xy_collocated) # 
 w_diag, bx_diag, by_diag = calculate_second_order_moments(halos, levelset, xy_collocated, bary)
+
+Delta_x_minus = backward_difference_matrix_sparse_2D_x(nx, ny)
+Delta_y_minus = backward_difference_matrix_sparse_2D_y(nx, ny)
+
+println(size(Delta_x_minus))
+println(size(Delta_y_minus))
+println(size(bx_diag))
+println(size(by_diag))
+#G = build_matrix_G(nx, ny, Delta_x_minus, Delta_y_minus, bx_diag, by_diag)
 
 #readline()
