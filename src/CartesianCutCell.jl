@@ -3,6 +3,7 @@ module CartesianCutCell
 import SparseArrays
 import LinearAlgebra
 
+export 
 greet() = print("Hello World!")
 
 include("operators.jl")

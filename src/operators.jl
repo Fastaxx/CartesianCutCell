@@ -1,3 +1,6 @@
+include("matrix.jl")
+using Test
+
 # Function to build the matrix G
 function build_matrix_G(nx::Int, ny::Int, Dx_minus, Dy_minus, Bx, By)    
     # Compute matrix products

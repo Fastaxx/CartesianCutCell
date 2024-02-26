@@ -1,5 +1,4 @@
 using SparseArrays
-
 # Function to build the diagonal matrices Ia and Ib
 function build_diagonal_matrix_sparse(ag::Vector{T}) where T
     n = length(ag)
@@ -42,8 +41,7 @@ function clip_volume_moments(V, dx, dy, epsilon)
     clipped_V = sparse(V.rowval, V.colptr, clipped_V_values)
     return clipped_V
 end
-
-
+ 
 
 """
     clip_surface_moments(A_alpha, d_alpha, epsilon)
