@@ -105,3 +105,34 @@ function compute_divergence(q_omega, q_gamma, GT, minus_GTHT, HT, gradient::Bool
     return divergence
 end
 
+function Cx(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay)
+    term1 = diagm(0 => Dx_minus * Sx_plus * Ax * ux_ω) * Sx_plus
+    term2 = diagm(0 => Dy_minus * Sx_plus * Ay * uy_ω) * Sy_plus
+    return term1 + term2
+end
+
+function Kx(u_γ, Sx_minus, HT)
+    return Sx_minus * diagm(0 => (HT * u_γ))
+end
+
+function Cy(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay)
+    term1 = diagm(0 => Dx_minus * Sy_plus * Ax * ux_ω) * Sx_plus
+    term2 = diagm(0 => Dy_minus * Sy_plus * Ay * uy_ω) * Sy_plus
+    return term1 + term2
+end
+
+function Ky(u_γ, Sy_minus, HT)
+    return Sy_minus * diagm(0 => (HT * u_γ))
+end
+
+function convx(Dx_minus, Dy_minus, Sx_plus, Sy_plus, Sx_minus, Ax, Ay, HT, u_γ, qγ_x, qγ_y, ux_ω, uy_ω)
+    term1 = Cx(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay) * qγ_x
+    term2 = Kx(u_γ, Sx_minus, HT) * (qγ_x+qγ_y)/2
+    return term1 + term2 
+end
+
+function convy(Dx_minus, Dy_minus, Sx_plus, Sy_plus, Sx_minus, Ax, Ay, HT, u_γ, qγ_x, qγ_y, ux_ω, uy_ω)
+    term1 = Cy(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay) * qγ_y
+    term2 = Ky(u_γ, Sy_minus, HT) * (qγ_x+qγ_y)/2
+    return term1 + term2 
+end

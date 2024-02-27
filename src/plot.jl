@@ -14,3 +14,21 @@ function plot_levelset(outer, levelset)
     
     println(z)
 end
+
+function plot_meshes(outer, inner)
+    # Créer un nouveau graphique
+    p = plot()
+
+    # Ajouter des points pour le maillage extérieur
+    for x in outer[1], y in outer[2]
+        scatter!(p, [x], [y], color = :blue, label = false)
+    end
+
+    # Ajouter des points pour le maillage intérieur
+    for x in inner[1], y in inner[2]
+        scatter!(p, [x], [y], color = :red, label = false)
+    end
+
+    # Afficher le graphique
+    return p
+end

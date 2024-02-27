@@ -1,4 +1,6 @@
 using Test
+using SparseArrays
+include("../src/operators.jl")
 
 @testset "build_matrix_G Tests" begin
     # Test 1: Check if the matrix is of size 2*nx*ny x nx*ny
@@ -90,3 +92,16 @@ end
     # Test 2: Check if the output is equal to Wdagger * (G * p_omega + H * p_gamma)
     @test grad == Wdagger * (G * p_omega + H * p_gamma)
 end
+
+@testset "compute_divergence Tests" begin
+    # Test 1: Check if the output is -GT * q_omega when gradient is true
+    q_omega, q_gamma = rand(5, 5), rand(5, 5)
+    GT, minus_GTHT, HT = rand(5, 5), rand(5, 5), rand(5, 5)
+    divergence = compute_divergence(q_omega, q_gamma, GT, minus_GTHT, HT, true)
+    @test divergence == -GT * q_omega
+
+    # Test 2: Check if the output is -(G^T + H^T) * q_omega + H^T * q_gamma when gradient is false
+    divergence = compute_divergence(q_omega, q_gamma, GT, minus_GTHT, HT, false)
+    @test divergence == minus_GTHT * q_omega + HT * q_gamma
+end
+

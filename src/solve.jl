@@ -1,7 +1,3 @@
-using SparseArrays
-using LinearAlgebra
-using Test
-
 ## Dirichlet Condition
 # Function to solve G^T W^T G pw = Vfw - G^T W^T H gg - Poisson Equation Dirichlet
 function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_gamma)

@@ -1,5 +1,6 @@
 using Test
 using CartesianCutCell
+include("../src/matrix.jl")
 
 @testset "forward_difference_matrix_sparse Tests" begin
     # Test 1: Check if the matrix is sparse
@@ -79,4 +80,127 @@ end
             end
         end
     end
+end
+
+@testset "Interpolation Matrix Sparse 2D Tests" begin
+    nx = 5
+    ny = 5
+
+    # Test for backward_interpolation_matrix_sparse_2D_x
+    D_sparse = backward_interpolation_matrix_sparse_2D_x(nx, ny)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny, nx*ny)
+
+    # Test for forward_interpolation_matrix_sparse_2D_x
+    D_sparse = forward_interpolation_matrix_sparse_2D_x(nx, ny)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny, nx*ny)
+
+    # Test for backward_interpolation_matrix_sparse_2D_y
+    D_sparse = backward_interpolation_matrix_sparse_2D_y(nx, ny)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny, nx*ny)
+
+    # Test for forward_interpolation_matrix_sparse_2D_y
+    D_sparse = forward_interpolation_matrix_sparse_2D_y(nx, ny)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny, nx*ny)
+end
+
+@testset "Difference Matrix Sparse 3D Tests" begin
+    nx = 5
+    ny = 5
+    nz = 5
+
+    # Test for backward_difference_matrix_sparse_3D_x
+    D_sparse = backward_difference_matrix_sparse_3D_x(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+end
+
+@testset "Difference Matrix Sparse 2D Tests" begin
+    nx = 5
+    ny = 5
+
+    # Test for backward_difference_matrix_sparse_2D_x
+    D_sparse = backward_difference_matrix_sparse_2D_x(nx, ny)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny, nx*ny)
+
+    # Test for forward_difference_matrix_sparse_2D_x
+    D_sparse = forward_difference_matrix_sparse_2D_x(nx, ny)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny, nx*ny)
+
+    # Test for backward_difference_matrix_sparse_2D_y
+    D_sparse = backward_difference_matrix_sparse_2D_y(nx, ny)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny, nx*ny)
+
+    # Test for forward_difference_matrix_sparse_2D_y
+    D_sparse = forward_difference_matrix_sparse_2D_y(nx, ny)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny, nx*ny)
+end
+
+@testset "Difference Matrix Sparse 3D Tests" begin
+    nx = 5
+    ny = 5
+    nz = 5
+
+    # Test for backward_difference_matrix_sparse_3D_x
+    D_sparse = backward_difference_matrix_sparse_3D_x(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+
+    # Test for forward_difference_matrix_sparse_3D_x
+    D_sparse = forward_difference_matrix_sparse_3D_x(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+
+    # Test for backward_difference_matrix_sparse_3D_y
+    D_sparse = backward_difference_matrix_sparse_3D_y(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+
+    # Test for forward_difference_matrix_sparse_3D_y
+    D_sparse = forward_difference_matrix_sparse_3D_y(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+end
+
+@testset "Interpolation Matrix Sparse 3D Tests" begin
+    nx = 5
+    ny = 5
+    nz = 5
+
+    # Test for backward_interpolation_matrix_sparse_3D_x
+    D_sparse = backward_interpolation_matrix_sparse_3D_x(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+
+    # Test for forward_interpolation_matrix_sparse_3D_x
+    D_sparse = forward_interpolation_matrix_sparse_3D_x(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+
+    # Test for backward_interpolation_matrix_sparse_3D_y
+    D_sparse = backward_interpolation_matrix_sparse_3D_y(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+
+    # Test for forward_interpolation_matrix_sparse_3D_y
+    D_sparse = forward_interpolation_matrix_sparse_3D_y(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+
+    # Test for backward_interpolation_matrix_sparse_3D_z
+    D_sparse = backward_interpolation_matrix_sparse_3D_z(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
+
+    # Test for forward_interpolation_matrix_sparse_3D_z
+    D_sparse = forward_interpolation_matrix_sparse_3D_z(nx, ny, nz)
+    @test issparse(D_sparse)
+    @test size(D_sparse) == (nx*ny*nz, nx*ny*nz)
 end
