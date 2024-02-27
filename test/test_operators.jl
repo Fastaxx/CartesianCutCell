@@ -1,4 +1,5 @@
 using Test
+using LinearAlgebra
 using SparseArrays
 include("../src/operators.jl")
 
@@ -105,3 +106,14 @@ end
     @test divergence == minus_GTHT * q_omega + HT * q_gamma
 end
 
+@testset "sparse_inverse Tests" begin
+    # Test 1: Check if the output is a sparse diagonal matrix with inverted diagonal elements
+    W = spdiagm(0 => [1, 2, 3, 0, 5])
+    W_inv = sparse_inverse(W)
+    @test W_inv == spdiagm(0 => [1, 1/2, 1/3, 1, 1/5])
+
+    # Test 2: Check if the output is a sparse diagonal matrix with ones when the input is a zero matrix
+    W = spdiagm(0 => zeros(5))
+    W_inv = sparse_inverse(W)
+    @test W_inv == spdiagm(0 => ones(5))
+end

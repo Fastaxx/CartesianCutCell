@@ -105,6 +105,21 @@ function compute_divergence(q_omega, q_gamma, GT, minus_GTHT, HT, gradient::Bool
     return divergence
 end
 
+function sparse_inverse(W::SparseMatrixCSC)
+    # Extraire les valeurs diagonales
+    diag_values = diag(W)
+
+    # Inverser les valeurs non nulles, remplacer les zéros par des uns
+    diag_values = [val != 0 ? 1/val : 1 for val in diag_values]
+
+    diag_values = float.(diag_values)
+
+    # Créer une nouvelle matrice diagonale creuse avec les nouvelles valeurs
+    W_inv = spdiagm(0 => diag_values)
+
+    return W_inv
+end
+
 function Cx(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay)
     term1 = diagm(0 => Dx_minus * Sx_plus * Ax * ux_ω) * Sx_plus
     term2 = diagm(0 => Dy_minus * Sx_plus * Ay * uy_ω) * Sy_plus
