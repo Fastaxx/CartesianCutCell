@@ -21,14 +21,17 @@ function calculate_first_order_moments(levelset, xyz)
     ax_diag = spdiagm(0 => Ax) # Diagonal matrix of Ax
     ay_diag = spdiagm(0 => Ay) # Diagonal matrix of Ay
 
-    return v_diag, bary, ax_diag, ay_diag
-end
+    return V, v_diag, bary, ax_diag, ay_diag
+end 
 
 function calculate_second_order_moments(levelset, xyz, bary)
     # Moments (2nd order)
     Ws = integrate(Tuple{0}, levelset, xyz, T, zero, bary)
     Wx = Ws[1] # Surface in x : Wx
     Wy = Ws[2] # Surface in y : Wy
+
+    border_cells_wx = [cell for (cell, value) in enumerate(Wx) if value == 0]
+    border_cells_wy = [cell for (cell, value) in enumerate(Wy) if value == 0]
 
     wx_diag = spdiagm(0 => Wx) # Diagonal matrix of Wx
     wy_diag = spdiagm(0 => Wy) # Diagonal matrix of Wy
@@ -39,13 +42,12 @@ function calculate_second_order_moments(levelset, xyz, bary)
     Bs = integrate(Tuple{1}, levelset, xyz, T, zero, bary)
     Bx = Bs[1] # Surface in x : Bx
     By = Bs[2] # Surface in y : By
-
+    
     bx_diag = spdiagm(0 => Bx) # Diagonal matrix of Bx
     by_diag = spdiagm(0 => By) # Diagonal matrix of By
 
-    return w_diag, bx_diag, by_diag
+    return w_diag, bx_diag, by_diag, border_cells_wx, border_cells_wy
 end
-
 
 
 

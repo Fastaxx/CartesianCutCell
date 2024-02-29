@@ -52,7 +52,7 @@ function build_matrix_H_T(nx::Int, ny::Int, Dx_plus, Dy_plus, Ax, Ay, Bx, By)
     block1 = Bx_Dx_plus - Dx_plus_Ax
     block2 = By_Dy_plus - Dy_plus_Ay
     
-    # Concatenate vertically to obtain H
+    # Concatenate horizontally to obtain H
     Ht = hcat(block1, block2)
     
     return Ht
