@@ -18,7 +18,6 @@ include("../src/operators.jl")
     @test G[nx*ny+1:end, :] == Dy_minus * By
 end
 
-
 @testset "build_matrix_G_T Tests" begin
     # Test 1: Check if the matrix is of size nx*ny x 2*nx*ny
     nx, ny = 5, 5
@@ -27,11 +26,11 @@ end
     G = build_matrix_G_T(nx, ny, Dx_plus, Dy_plus, Bx, By)
     @test size(G) == (nx*ny, 2*nx*ny)
 
-    # Test 2: Check if the first half of G is equal to -Bx * Dx_plus
-    @test G[:, 1:nx*ny] == -Bx * Dx_plus
+    # Test 2: Check if the first half of G is equal to Bx * Dx_plus
+    @test G[:, 1:nx*ny] == Bx * Dx_plus
 
-    # Test 3: Check if the second half of G is equal to -By * Dy_plus
-    @test G[:, nx*ny+1:end] == -By * Dy_plus
+    # Test 3: Check if the second half of G is equal to By * Dy_plus
+    @test G[:, nx*ny+1:end] == By * Dy_plus
 end
 
 @testset "build_matrix_H Tests" begin

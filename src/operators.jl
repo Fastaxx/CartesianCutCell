@@ -16,10 +16,10 @@ function build_matrix_G_T(nx::Int, ny::Int, Dx_plus, Dy_plus, Bx, By)
     Dx_plus_Bx = Bx * Dx_plus
     Dy_plus_By = By * Dy_plus
     
-    # Concatenate vertically to obtain G
-    G = - hcat(Dx_plus_Bx, Dy_plus_By)
+    # Concatenate horizontally to obtain G
+    GT = -hcat(Dx_plus_Bx, Dy_plus_By)
     
-    return G
+    return GT
 end
 
 # Function to create the matrix H
@@ -59,7 +59,7 @@ function build_matrix_H_T(nx::Int, ny::Int, Dx_plus, Dy_plus, Ax, Ay, Bx, By)
 end
 
 # Function to create the matrix -(G^T+H^T)
-function build_matrix_GTHT(nx::Int, ny::Int, Dx_plus, Dy_plus, Ax, Ay)
+function build_matrix_minus_GTHT(nx::Int, ny::Int, Dx_plus, Dy_plus, Ax, Ay)
     # Compute matrix products
     Dx_plus_Ax = Dx_plus * Ax
     Dy_plus_Ay = Dy_plus * Ay
@@ -69,7 +69,7 @@ function build_matrix_GTHT(nx::Int, ny::Int, Dx_plus, Dy_plus, Ax, Ay)
     block2 = Dy_plus_Ay
     
     # Concatenate vertically to obtain H
-    minus_GTHT = hcat(block1, block2)
+    minus_GTHT = -hcat(block1, block2)
     
     return minus_GTHT
 end

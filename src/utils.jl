@@ -1,5 +1,17 @@
-function volume_integrated_p_norm(e1, e2, V, p)
+function volume_integrated_p_norm(diff, V, p)
     total_volume = sum(V)
-    integral = sum((abs.(e1[i] - e2[i])^p * V[i] for i in 1:length(V)))
-    return (integral / total_volume)^(1/p)
+    abs_error = abs.(diff) .^p
+    integral = sum(abs_error .* V)/ total_volume
+    return (integral)^(1/p)
+end
+
+function get_condition_number_L2_svd(A)
+    # Get the maximum singular value
+    singular_values_list = svds(A, nsv=4)[1].S
+    max_singular_value = maximum(singular_values_list)
+
+    # Get the minimum singular value
+    min_singular_value = minimum(singular_values_list)
+
+    return max_singular_value/min_singular_value
 end
