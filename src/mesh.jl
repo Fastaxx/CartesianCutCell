@@ -30,9 +30,10 @@ function calculate_second_order_moments(levelset, xyz, bary)
     Wx = Ws[1] # Surface in x : Wx
     Wy = Ws[2] # Surface in y : Wy
 
+    # Premiere facon de trouver les frontieres. Pb : Pas de distinction entre l'interface et la bordure du domaine
     border_cells_wx = [cell for (cell, value) in enumerate(Wx) if value == 0]
     border_cells_wy = [cell for (cell, value) in enumerate(Wy) if value == 0]
-
+    @show border_cells_wx
     wx_diag = spdiagm(0 => Wx) # Diagonal matrix of Wx
     wy_diag = spdiagm(0 => Wy) # Diagonal matrix of Wy
 

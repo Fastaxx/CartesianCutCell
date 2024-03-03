@@ -16,9 +16,9 @@ include("boundary.jl")
 include("utils.jl")
 
 mesh_step_size_list = [2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125]
-mesh_step_size = mesh_step_size_list[2]
-universe = (-1:mesh_step_size:11, -1:mesh_step_size:11)
-node = (1:mesh_step_size:9, 1:mesh_step_size:9)
+mesh_step_size = mesh_step_size_list[3]
+universe = (-31:mesh_step_size:31, -31:mesh_step_size:31)
+node = (-10:mesh_step_size:10, -10:mesh_step_size:10) # Avec cette taille on a un rayon de 1.0
 
 # define mesh
 xyz, xyz_staggered = generate_mesh(universe, node)
@@ -27,9 +27,28 @@ nx = length(xyz[1])
 ny = length(xyz[2])
 
 # define level set
-const R = 0.5
+const R = 1.0
 const a, b = 0.5, 0.5
 
+struct HyperSphere{N,T}
+    radius::T
+    center::NTuple{N,T}
+end
+
+function (object::HyperSphere{1})(x, _...)
+    (; radius, center) = object
+    (x - center[1]) ^ 2 - radius ^ 2
+end
+# Change level set sqrt a verifier
+function (object::HyperSphere{2})(x, y, _...)
+    (; radius, center) = object
+    (x - center[1]) ^ 2 + (y - center[2]) ^ 2 - radius^2
+end
+
+function (object::HyperSphere{3})(x, y, z)
+    (; radius, center) = object
+    (x - center[1]) ^ 2 + (y - center[2]) ^ 2 + (z - center[3]) ^ 2 - radius ^ 2
+end
 
 struct HyperCuboid{N,T}
     lengths::NTuple{N,T}
@@ -72,7 +91,7 @@ function (object::RectangleTrou{3})(x, y, z)
 end
 levelset = HyperSphere(R, (a, b))
 #levelset = HyperCuboid{2, Float64}((1.0, 1.0), (0.5, 0.5))
-#levelset = RectangleTrou(R, (a, b))
+levelset = RectangleTrou(R, (a, b))
 
 # calculate first and second order moments
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(levelset, xyz)
