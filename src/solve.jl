@@ -46,9 +46,10 @@ function solve_Ax_b_neumann(G, GT, Wdagger, H, HT, V, f_omega, IGamma, g_gamma)
     # Solving the linear system
     x = cg(A, b)
 
+    mid = length(x) ÷ 2
     # Extracting p_ω and p_γ from the solution vector
-    p_ω = x[1:size(G, 2)]
-    p_γ = x[(size(G, 2) + 1):end]
+    p_ω = x[1:mid]
+    p_γ = x[(mid + 1):end]
 
     return p_ω, p_γ
 end
@@ -91,9 +92,10 @@ function solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, V, f_omega, IGamma, g_g
     # Solving the linear system
     x = cg(A, b)
 
+    mid = length(x) ÷ 2
     # Extracting p_ω and p_γ from the solution vector
-    p_ω = x[1:size(G, 2)]
-    p_γ = x[(size(G, 2) + 1):end]
+    p_ω = x[1:mid]
+    p_γ = x[(mid + 1):end]
 
     return p_ω, p_γ
 end

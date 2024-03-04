@@ -1,5 +1,57 @@
 using SparseArrays
 using Test
+
+function get_cut_cells(levelset, xyz)
+    nx = length(xyz[1])
+    ny = length(xyz[2])
+    cut_cells = []
+
+    for i in 1:nx-1
+        for j in 1:ny-1
+            # Get the values of the level set at the corners of the cell
+            values = [levelset(xyz[1][i], xyz[2][j]), levelset(xyz[1][i+1], xyz[2][j]), levelset(xyz[1][i], xyz[2][j+1]), levelset(xyz[1][i+1], xyz[2][j+1])]
+
+            # If the level set changes sign across the cell, add it to the list of cut cells
+            if any(x -> x < 0, values) && any(x -> x > 0, values)
+                push!(cut_cells, (i, j))
+            end
+        end
+    end
+
+    return cut_cells
+end
+
+function create_boundary(cut_cells, nx, ny, value)
+    # Initialize a vector of zeros
+    vector = zeros(nx * ny)
+
+    # Assign the given value to the cut cells
+    for (i, j) in cut_cells
+        index = (j-1) * nx + i
+        vector[index] = value
+    end
+
+    return vector
+end
+
+function get_border_cells(xyz)
+    nx = length(xyz[1])
+    ny = length(xyz[2])
+    border_cells = []
+
+    for i in 1:nx-1
+        for j in 1:ny-1
+            # If the cell is on the border of the mesh, add it to the list of border cells
+            if i == 1 || i == nx-1 || j == 1 || j == ny-1
+                push!(border_cells, (i, j))
+            end
+        end
+    end
+
+    return border_cells
+end
+
+
 # Function to build the diagonal matrices Ia and Ib
 function build_diagonal_matrix_sparse(ag::Vector{T}) where T
     n = length(ag)

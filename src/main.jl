@@ -14,10 +14,11 @@ include("solve.jl")
 include("mesh.jl")
 include("boundary.jl")
 include("utils.jl")
+include("plot.jl")
 
 mesh_step_size_list = [2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125]
 mesh_step_size = mesh_step_size_list[3]
-universe = (-31:mesh_step_size:31, -31:mesh_step_size:31)
+universe = (-21:mesh_step_size:21, -21:mesh_step_size:21)
 node = (-10:mesh_step_size:10, -10:mesh_step_size:10) # Avec cette taille on a un rayon de 1.0
 
 # define mesh
@@ -26,8 +27,10 @@ xyz, xyz_staggered = generate_mesh(universe, node)
 nx = length(xyz[1])
 ny = length(xyz[2])
 
+@show nx*ny
+
 # define level set
-const R = 1.0
+const R = 0.5
 const a, b = 0.5, 0.5
 
 struct HyperSphere{N,T}
@@ -89,9 +92,19 @@ function (object::RectangleTrou{3})(x, y, z)
     (; radius, center) = object
     -((x - center[1]) ^ 2 + (y - center[2]) ^ 2 + (z - center[3]) ^ 2 - radius ^ 2)
 end
+
 levelset = HyperSphere(R, (a, b))
 #levelset = HyperCuboid{2, Float64}((1.0, 1.0), (0.5, 0.5))
-levelset = RectangleTrou(R, (a, b))
+#levelset = RectangleTrou(R, (a, b))
+
+# Cut cells Init:
+cut_cells = get_cut_cells(levelset, xyz)
+cut_cells_boundary = create_boundary(cut_cells, length(xyz[1]), length(xyz[2]), 0.0)
+
+# Border Init
+border_cells = get_border_cells(xyz)
+border_cells_boundary = create_boundary(border_cells, length(xyz[1]), length(xyz[2]), 0.0)
+
 
 # calculate first and second order moments
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(levelset, xyz)
@@ -115,25 +128,22 @@ Ib = build_diagonal_matrix_sparse(ones(nx*ny))
 # Dirichlet boundary conditions
 # Forcing function
 function f_omega(x, y)
-    return 4.0 #-2.0*x*(y-1.0)*(y-2.0*x+x*y+2.)*exp(x-y)
+    return 4.0*pi^4*cos(pi^2*x*y)*sin(pi^2*x*y)*(x^2+y^2) #-2.0*x*(y-1.0)*(y-2.0*x+x*y+2.)*exp(x-y)
 end
 
 # Analytic solution
 function p(x, y)
-    return (1-x^2-y^2) #exp(x-y)*x*(1.0-x)*y*(1.0-y)
+    return cos(pi^2*x*y)*sin(pi^2*x*y)
 end
 
 f_omega_values = [f_omega(x, y) for (x, y) in bary]
-p_omega = [p(x, y) for (x, y) in bary]
-
+g_gamma = cut_cells_boundary + border_cells_boundary
 g_gamma = zeros(nx*ny)
-p_omega = [value for (i, value) in enumerate(p_omega) if !(i in border_cells_wx)]
 
-# Calculate the coordinates relative to the center of the sphere
-bary_centered = [(x - a, y - b) for (x, y) in bary]
-
-# Calculate the values of the analytic solution
-p_omega = [p(x, y) for (x, y) in bary_centered]
+p_omega = [levelset(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary]
+#p_omega = [value for (i, value) in enumerate(p_omega) if !(i in border_cells_wx)]
+#bary_centered = [(x - a, y - b) for (x, y) in bary]
+#p_omega = [p(x, y) for (x, y) in bary_centered]
 
 x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma)
 #x_dirichlet = [value for (i, value) in enumerate(x_dirichlet) if !(i in border_cells_wx)]
@@ -142,16 +152,35 @@ x_dirichlet_matrix = reshape(x_dirichlet, (nx, ny))
 heatmap(x_dirichlet_matrix, title="Poisson Equation - Dirichlet BC", aspect_ratio=1)
 readline()
 
+x_analytic_matrix = reshape(p_omega, (nx, ny))
+heatmap(x_analytic_matrix, title="Analytic Solution", aspect_ratio=1)
+readline()
+
+diff = x_dirichlet - p_omega
+diff_matrix = reshape(diff, (nx, ny))
+heatmap(diff_matrix, title="Difference between Dirichlet and Analytic Solution", aspect_ratio=1)
+readline()
+
+l2_norm_error = volume_integrated_p_norm(x_dirichlet, p_omega, V, 2.0)
+@show l2_norm_error
 
 """
+
 # Neumann boundary conditions
 # Il faut imposer une condition en plus
 
-x_neumann = solve_Ax_b_neumann(G, GT, Wdagger, H, HT, v_diag, f_omega_values, IGamma, g_gamma)
+x_neumann_w, x_neumann_g = solve_Ax_b_neumann(G, GT, Wdagger, H, HT, v_diag, f_omega_values, IGamma, g_gamma)
+@show size(x_neumann_g)
 
+x_neumann_matrix = reshape(x_neumann_g, (nx, ny))
+heatmap(x_neumann_matrix, title="Poisson Equation - Neumann BC", aspect_ratio=1)
+readline()
 
 # Robin boundary conditions
-x_robin = solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, v_diag, f_omega_values, IGamma, g_gamma)
+x_robin_w, x_robin_g = solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, v_diag, f_omega_values, IGamma, g_gamma)
+@show x_robin_w
 
-@show x_robin
+x_robin_matrix = reshape(x_robin_w, (nx, ny))
+heatmap(x_robin_matrix, title="Poisson Equation - Robin BC", aspect_ratio=1)
+readline()
 """

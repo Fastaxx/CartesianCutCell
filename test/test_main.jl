@@ -42,7 +42,7 @@ Delta_x_minus, Delta_y_minus = backward_difference_matrix_sparse_2D_x(nx, ny), b
 Delta_x_plus, Delta_y_plus = forward_difference_matrix_sparse_2D_x(nx, ny), forward_difference_matrix_sparse_2D_y(nx, ny)
 
 function Φ(x, y)
-    return 2.0*x
+    return 2.0
 end
 
 function ∂Φ∂x(x, y)
@@ -83,5 +83,8 @@ diff_without_border = grad_approx_x_without_border - grad_true_x_without_border
 
 l2_norm_error = volume_integrated_p_norm(diff_without_border, V, 2)
 
+matrix = reshape(grad_approx_x, nx, ny)
+heatmap(matrix, title = "Heatmap of grad_approx_x_without_border")
+readline()
 @show l2_norm_error
 

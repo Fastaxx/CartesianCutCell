@@ -12,7 +12,9 @@ function calculate_first_order_moments(levelset, xyz)
     # first-kind moments
     V, bary = integrate(Tuple{0}, levelset, xyz, T, zero)
     As = integrate(Tuple{1}, levelset, xyz, T, zero)
-
+    mid = length(bary) ÷ 2
+    barx = bary[mid] 
+    @show  barx  
     v_diag = spdiagm(0 => V) # Diagonal matrix of Volumes : V
 
     Ax = As[1] # Surface in x : Ax
@@ -33,7 +35,7 @@ function calculate_second_order_moments(levelset, xyz, bary)
     # Premiere facon de trouver les frontieres. Pb : Pas de distinction entre l'interface et la bordure du domaine
     border_cells_wx = [cell for (cell, value) in enumerate(Wx) if value == 0]
     border_cells_wy = [cell for (cell, value) in enumerate(Wy) if value == 0]
-    @show border_cells_wx
+
     wx_diag = spdiagm(0 => Wx) # Diagonal matrix of Wx
     wy_diag = spdiagm(0 => Wy) # Diagonal matrix of Wy
 

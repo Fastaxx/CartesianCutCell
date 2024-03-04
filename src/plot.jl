@@ -1,6 +1,3 @@
-using Plots
-Plots.default(show = true)
-
 function plot_levelset(outer, levelset)
     # Générer une grille de points
     x = range(outer[1][1], stop=outer[1][end], length=100)
@@ -31,4 +28,60 @@ function plot_meshes(outer, inner)
 
     # Afficher le graphique
     return p
+end
+
+function plot_cut_cells(cut_cells, xyz)
+    plot() # Create a new plot
+
+    for (i, j) in cut_cells
+        # Get the coordinates of the corners of the cell
+        x_coords = [xyz[1][i], xyz[1][i+1], xyz[1][i+1], xyz[1][i], xyz[1][i]]
+        y_coords = [xyz[2][j], xyz[2][j], xyz[2][j+1], xyz[2][j+1], xyz[2][j]]
+
+        # Plot the cell in red
+        plot!(x_coords, y_coords, fill = true, color = :red)
+        
+    end
+    readline()
+    display(plot) # Display the plot
+end
+
+function plot_border_cells(border_cells, xyz)
+    plot() # Create a new plot
+
+    for (i, j) in border_cells
+        # Get the coordinates of the corners of the cell
+        x_coords = [xyz[1][i], xyz[1][i+1], xyz[1][i+1], xyz[1][i], xyz[1][i]]
+        y_coords = [xyz[2][j], xyz[2][j], xyz[2][j+1], xyz[2][j+1], xyz[2][j]]
+
+        # Plot the cell in blue
+        plot!(x_coords, y_coords, fill = true, color = :blue)
+    end
+
+    display(plot) # Display the plot
+    readline()
+end
+
+function plot_cells(cut_cells, border_cells, xyz)
+    plot() # Create a new plot
+
+    for (i, j) in cut_cells
+        # Get the coordinates of the corners of the cell
+        x_coords = [xyz[1][i], xyz[1][i+1], xyz[1][i+1], xyz[1][i], xyz[1][i]]
+        y_coords = [xyz[2][j], xyz[2][j], xyz[2][j+1], xyz[2][j+1], xyz[2][j]]
+
+        # Plot the cut cell in red
+        plot!(x_coords, y_coords, fill = true, color = :red)
+    end
+
+    for (i, j) in border_cells
+        # Get the coordinates of the corners of the cell
+        x_coords = [xyz[1][i], xyz[1][i+1], xyz[1][i+1], xyz[1][i], xyz[1][i]]
+        y_coords = [xyz[2][j], xyz[2][j], xyz[2][j+1], xyz[2][j+1], xyz[2][j]]
+
+        # Plot the border cell in blue
+        plot!(x_coords, y_coords, fill = true, color = :blue, legend = false)
+    end
+
+    display(plot) # Display the plot
 end
