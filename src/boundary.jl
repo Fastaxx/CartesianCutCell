@@ -1,10 +1,7 @@
-using SparseArrays
-using Test
-
 function get_cut_cells(levelset, xyz)
     nx = length(xyz[1])
     ny = length(xyz[2])
-    cut_cells = []
+    cut_cells = CartesianIndex[]
 
     for i in 1:nx-1
         for j in 1:ny-1
@@ -13,7 +10,7 @@ function get_cut_cells(levelset, xyz)
 
             # If the level set changes sign across the cell, add it to the list of cut cells
             if any(x -> x < 0, values) && any(x -> x > 0, values)
-                push!(cut_cells, (i, j))
+                push!(cut_cells, CartesianIndex(i, j))
             end
         end
     end
@@ -22,28 +19,27 @@ function get_cut_cells(levelset, xyz)
 end
 
 function create_boundary(cut_cells, nx, ny, value)
-    # Initialize a vector of zeros
-    vector = zeros(nx * ny)
+    # Initialize a matrix of zeros
+    matrix = zeros(nx, ny)
 
     # Assign the given value to the cut cells
-    for (i, j) in cut_cells
-        index = (j-1) * nx + i
-        vector[index] = value
+    for index in cut_cells
+        matrix[index] = value
     end
 
-    return vector
+    return vec(matrix)
 end
 
 function get_border_cells(xyz)
     nx = length(xyz[1])
     ny = length(xyz[2])
-    border_cells = []
+    border_cells = CartesianIndex[]
 
     for i in 1:nx-1
         for j in 1:ny-1
             # If the cell is on the border of the mesh, add it to the list of border cells
             if i == 1 || i == nx-1 || j == 1 || j == ny-1
-                push!(border_cells, (i, j))
+                push!(border_cells, CartesianIndex(i, j))
             end
         end
     end
@@ -51,6 +47,23 @@ function get_border_cells(xyz)
     return border_cells
 end
 
+function get_volume_indices(V, max_volume)
+    solid_indices = CartesianIndex[]
+    fluid_indices = CartesianIndex[]
+    cut_cell_indices = CartesianIndex[]
+
+    for index in CartesianIndices(V)
+        if V[index] == 0
+            push!(solid_indices, index)
+        elseif V[index] == max_volume
+            push!(fluid_indices, index)
+        else
+            push!(cut_cell_indices, index)
+        end
+    end
+
+    return solid_indices, fluid_indices, cut_cell_indices
+end
 
 # Function to build the diagonal matrices Ia and Ib
 function build_diagonal_matrix_sparse(ag::Vector{T}) where T
@@ -59,30 +72,17 @@ function build_diagonal_matrix_sparse(ag::Vector{T}) where T
     return Ia
 end
 
-"""
-# Example usage:
-ag = [1.0, 2.0, 3.0, 4.0]  # Example vector
-Ia_sparse = build_diagonal_matrix_sparse(ag)
-println(Ia_sparse)
-"""
 function build_igamma(HT::SparseMatrixCSC)
-    # Calculer la somme de chaque ligne de HT
-    row_sums = sum(HT, dims=2)
+    vec_1 = [1 for i in 1:size(HT, 2)]
 
-    # Prendre la valeur absolue de chaque somme
+    # Calculer le produit
+    row_sums = HT*vec_1
+
+    # Prendre la valeur absolue de chaque élément
     abs_row_sums = abs.(row_sums)
 
-    # Créer une matrice diagonale creuse avec les sommes de ligne comme valeurs diagonales
-    Igamma = spdiagm(0 => vec(abs_row_sums))
+    # Créer une matrice diagonale creuse avec elements ligne comme valeurs diagonales
+    Igamma = spdiagm(0 => abs_row_sums)
 
     return Igamma
 end
-
-"""
-# Test pour la fonction Igamma
-@testset "Igamma" begin
-    HT = sparse([1.0 2.0; 3.0 4.0])
-    Igamma_matrix = build_igamma(HT)
-    @test Igamma_matrix == spdiagm(0 => vec(abs.(sum(HT, dims=2))))
-end
-"""

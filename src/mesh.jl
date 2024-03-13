@@ -1,4 +1,3 @@
-import Base: OneTo
 const T = Float64
 
 function generate_mesh(outer, inner)
@@ -12,9 +11,7 @@ function calculate_first_order_moments(levelset, xyz)
     # first-kind moments
     V, bary = integrate(Tuple{0}, levelset, xyz, T, zero)
     As = integrate(Tuple{1}, levelset, xyz, T, zero)
-    mid = length(bary) ÷ 2
-    barx = bary[mid] 
-    @show  barx  
+    
     v_diag = spdiagm(0 => V) # Diagonal matrix of Volumes : V
 
     Ax = As[1] # Surface in x : Ax

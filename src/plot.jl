@@ -49,7 +49,9 @@ end
 function plot_border_cells(border_cells, xyz)
     plot() # Create a new plot
 
-    for (i, j) in border_cells
+    for cell in border_cells
+        i, j = cell.I # Get the indices from the CartesianIndex
+        
         # Get the coordinates of the corners of the cell
         x_coords = [xyz[1][i], xyz[1][i+1], xyz[1][i+1], xyz[1][i], xyz[1][i]]
         y_coords = [xyz[2][j], xyz[2][j], xyz[2][j+1], xyz[2][j+1], xyz[2][j]]

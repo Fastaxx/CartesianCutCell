@@ -17,37 +17,35 @@ include("utils.jl")
 include("plot.jl")
 
 mesh_step_size_list = [2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125]
-mesh_step_size = mesh_step_size_list[3]
-universe = (-21:mesh_step_size:21, -21:mesh_step_size:21)
-node = (-10:mesh_step_size:10, -10:mesh_step_size:10) # Avec cette taille on a un rayon de 1.0
+mesh_step_size = mesh_step_size_list[5]
+universe = (-20:mesh_step_size:20, -20:mesh_step_size:20) #(-20:20, -20:20)
+node = (-5:mesh_step_size:5, -5:mesh_step_size:5) # Avec cette taille on a un rayon de 1.0 (-5:5, -5:5)
 
 # define mesh
 xyz, xyz_staggered = generate_mesh(universe, node)
-
 nx = length(xyz[1])
 ny = length(xyz[2])
 
 @show nx*ny
 
 # define level set
-const R = 0.5
+const R = 1.0
 const a, b = 0.5, 0.5
 
 struct HyperSphere{N,T}
     radius::T
     center::NTuple{N,T}
 end
-
 function (object::HyperSphere{1})(x, _...)
     (; radius, center) = object
     (x - center[1]) ^ 2 - radius ^ 2
 end
+
 # Change level set sqrt a verifier
 function (object::HyperSphere{2})(x, y, _...)
     (; radius, center) = object
     (x - center[1]) ^ 2 + (y - center[2]) ^ 2 - radius^2
 end
-
 function (object::HyperSphere{3})(x, y, z)
     (; radius, center) = object
     (x - center[1]) ^ 2 + (y - center[2]) ^ 2 + (z - center[3]) ^ 2 - radius ^ 2
@@ -57,12 +55,10 @@ struct HyperCuboid{N,T}
     lengths::NTuple{N,T}
     center::NTuple{N,T}
 end
-
 function (object::HyperCuboid{1})(x, _...)
     (; lengths, center) = object
     abs(x - center[1]) - lengths[1] / 2
 end
-
 function (object::HyperCuboid{2})(x, y, _...)
     (; lengths, center) = object
     max(abs(x - center[1]) - lengths[1] / 2, abs(y - center[2]) - lengths[2] / 2)
@@ -105,7 +101,6 @@ cut_cells_boundary = create_boundary(cut_cells, length(xyz[1]), length(xyz[2]), 
 border_cells = get_border_cells(xyz)
 border_cells_boundary = create_boundary(border_cells, length(xyz[1]), length(xyz[2]), 0.0)
 
-
 # calculate first and second order moments
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(levelset, xyz)
 w_diag, bx_diag, by_diag, border_cells_wx, border_cells_wy = calculate_second_order_moments(levelset, xyz, bary)
@@ -125,28 +120,28 @@ IGamma = build_igamma(HT)
 Ia = build_diagonal_matrix_sparse(ones(nx*ny))
 Ib = build_diagonal_matrix_sparse(ones(nx*ny))
 
+mid = length(bary) ÷ 2
+barx = bary[mid] 
+
 # Dirichlet boundary conditions
 # Forcing function
 function f_omega(x, y)
-    return 4.0*pi^4*cos(pi^2*x*y)*sin(pi^2*x*y)*(x^2+y^2) #-2.0*x*(y-1.0)*(y-2.0*x+x*y+2.)*exp(x-y)
+    return 4.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
 end
 
 # Analytic solution
 function p(x, y)
-    return cos(pi^2*x*y)*sin(pi^2*x*y)
+    return 1-(x-a)^2-(y-b)^2 #cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))  
 end
 
 f_omega_values = [f_omega(x, y) for (x, y) in bary]
 g_gamma = cut_cells_boundary + border_cells_boundary
-g_gamma = zeros(nx*ny)
 
 p_omega = [levelset(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary]
-#p_omega = [value for (i, value) in enumerate(p_omega) if !(i in border_cells_wx)]
-#bary_centered = [(x - a, y - b) for (x, y) in bary]
-#p_omega = [p(x, y) for (x, y) in bary_centered]
+p_omega_without_cutcells = [value for (i, value) in enumerate(p_omega) if !(i in cut_cells)]
 
-x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma)
-#x_dirichlet = [value for (i, value) in enumerate(x_dirichlet) if !(i in border_cells_wx)]
+x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells,border_cells_boundary)
+x_dirichlet_without_cutcells = [value for (i, value) in enumerate(x_dirichlet) if !(i in cut_cells)]
 
 x_dirichlet_matrix = reshape(x_dirichlet, (nx, ny))
 heatmap(x_dirichlet_matrix, title="Poisson Equation - Dirichlet BC", aspect_ratio=1)
@@ -164,15 +159,18 @@ readline()
 l2_norm_error = volume_integrated_p_norm(x_dirichlet, p_omega, V, 2.0)
 @show l2_norm_error
 
-"""
+V_without_cutcells = [value for (i, value) in enumerate(V) if !(i in cut_cells)]
+@show volume_integrated_p_norm(x_dirichlet_without_cutcells, p_omega_without_cutcells, V_without_cutcells, 2.0)
 
+
+"""
 # Neumann boundary conditions
 # Il faut imposer une condition en plus
 
 x_neumann_w, x_neumann_g = solve_Ax_b_neumann(G, GT, Wdagger, H, HT, v_diag, f_omega_values, IGamma, g_gamma)
 @show size(x_neumann_g)
 
-x_neumann_matrix = reshape(x_neumann_g, (nx, ny))
+x_neumann_matrix = reshape(x_neumann_w, (nx, ny))
 heatmap(x_neumann_matrix, title="Poisson Equation - Neumann BC", aspect_ratio=1)
 readline()
 

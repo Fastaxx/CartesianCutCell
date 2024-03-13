@@ -69,7 +69,7 @@ function build_matrix_minus_GTHT(nx::Int, ny::Int, Dx_plus, Dy_plus, Ax, Ay)
     block2 = Dy_plus_Ay
     
     # Concatenate vertically to obtain H
-    minus_GTHT = -hcat(block1, block2)
+    minus_GTHT = hcat(block1, block2)
     
     return minus_GTHT
 end
@@ -89,18 +89,17 @@ function compute_grad_operator(p_omega, p_gamma, Wdagger, G, H)
 end
 
 # Function to compute the div operator
-function compute_divergence(q_omega, q_gamma, GT, minus_GTHT, HT, gradient::Bool=false)
+function compute_divergence(q_omega, q_gamma, Vdagger, GT, minus_GTHT, HT, gradient::Bool=false)
     if gradient
-        divergence = - GT * q_omega
+        divergence = Vdagger*(- GT * q_omega)
     else
         # Compute -(G^T + H^T) * q_omega
         div_qw = minus_GTHT * q_omega
     
         # Compute H^T * q_gamma
         div_qg = HT * q_gamma
-    
         # Compute divergence
-        divergence = div_qw + div_qg
+        divergence = Vdagger*(div_qw + div_qg)
     end
     return divergence
 end

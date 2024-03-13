@@ -1,10 +1,19 @@
-include("utils.jl")
 ## Dirichlet Condition
 # Function to solve G^T W^T G pw = Vfw - G^T W^T H gg - Poisson Equation Dirichlet
-function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_gamma)
+function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_gamma, border_cells, border_cells_boundary)
     A = GT * Wdagger * G  # Construct the matrix A
     b = V * f_omega - GT * Wdagger * H * g_gamma # Construct the vector b
-    x = cg(A, b) # Solve Ax = b
+    
+    ## A activer si on veut séparer border/interface
+    # Modify A and b for each border cell
+    for (i, cell) in enumerate(border_cells)
+        linear_index = LinearIndices((nx, ny))[cell]
+        A[linear_index, :] .= 0
+        A[linear_index, linear_index] = 1
+        b[linear_index] = border_cells_boundary[linear_index]
+    end
+
+    x = bicgstabl(A, b) # Solve Ax = b
     return x
 end
 
@@ -38,13 +47,15 @@ function construct_rhs_vector_neumann(V, f_omega, IGamma, g_gamma)
     return b
 end
 
+using Statistics
+
 # Function to solve the Bloc Matrix System Neumann
 function solve_Ax_b_neumann(G, GT, Wdagger, H, HT, V, f_omega, IGamma, g_gamma)
     A = construct_block_matrix_neumann(G, GT, Wdagger, H, HT)
     b = construct_rhs_vector_neumann(V, f_omega, IGamma, g_gamma)
-
+    b .-= mean(f_omega)
     # Solving the linear system
-    x = cg(A, b)
+    x = cg(A, b, maxiter=10000)
 
     mid = length(x) ÷ 2
     # Extracting p_ω and p_γ from the solution vector
@@ -99,6 +110,3 @@ function solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, V, f_omega, IGamma, g_g
 
     return p_ω, p_γ
 end
-
-
-
