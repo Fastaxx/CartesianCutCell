@@ -17,7 +17,7 @@ include("../src/utils.jl")
 
 ### Test divergence
 mesh_step_size_list = [2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125]
-mesh_step_size = mesh_step_size_list[4]
+mesh_step_size = mesh_step_size_list[2]
 universe = (-20:mesh_step_size:20, -20:mesh_step_size:20) #(-20:20, -20:20)
 node = (-5:mesh_step_size:5, -5:mesh_step_size:5) # Avec cette taille on a un rayon de 1.0 (-5:5, -5:5)
 
@@ -45,11 +45,11 @@ Delta_x_plus, Delta_y_plus = forward_difference_matrix_sparse_2D_x(nx, ny), forw
 cut_cells = get_cut_cells(levelset, xyz_staggered)
 
 function u_x(x, y)
-    return 2.0*(x-a)^2
+    return 2.0*(x-a)
 end
 
 function u_y(x, y)
-    return 2.0*(y-b)^2
+    return 2.0*(y-b)
 end
 
 ux = [u_x(x, y) for (x, y) in bary]
@@ -60,7 +60,7 @@ function u(ux, uy)
 end
 
 # Ground truth
-div_true = [levelset(x, y) >= 0 ? 0 : 4.0*x+4.0*y for (x, y) in bary]
+div_true = [levelset(x, y) > 0 ? 0 : 4.0 for (x, y) in bary]
 
 # Approximation
 q_omega = u(ux, uy)
@@ -76,14 +76,9 @@ div_approx = compute_divergence(q_omega, q_gamma, Vdagger, GT, minus_GTHT, HT, f
 max_volume = maximum(V)
 solid_indices, fluid_indices, cut_cells_indices = get_volume_indices(V, max_volume)
 
-# A Vérifier si on récupére bien le bon volume
-# Solid Part
-V_solid = [V[index] for index in solid_indices]
-solid_div_approx = [div_approx[index] for index in solid_indices]
-solid_div_true = [0 for i in 1:length(solid_div_approx)]
-diff_solid = solid_div_approx - solid_div_true
-l2_error_solid = volume_integrated_p_norm(solid_div_approx, solid_div_true, V_solid, 2.0)
-@show l2_error_solid
+
+l2_norm_error = volume_integrated_p_norm(div_approx, div_true, V, 2.0)
+@show l2_norm_error
 
 # Fluid Part
 V_fluid = [V[index] for index in fluid_indices]
@@ -117,8 +112,6 @@ div_diff_matrix = reshape(div_diff, (nx, ny))
 heatmap(div_diff_matrix, aspect_ratio = 1, color = :blues, xlabel = "x", ylabel = "y", title = "Divergence Approximation - Truth")
 readline()
 
-l2_norm_error = volume_integrated_p_norm(div_approx, div_true, V, 2.0)
-@show l2_norm_error
 
 #cut_cells_div_approx = [div_approx[i] for i in cut_cells]
 #other_cells_div_approx = [div_approx[i] for i in 1:length(div_approx) if i ∉ cut_cells]

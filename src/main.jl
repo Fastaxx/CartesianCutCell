@@ -17,7 +17,7 @@ include("utils.jl")
 include("plot.jl")
 
 mesh_step_size_list = [2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125]
-mesh_step_size = mesh_step_size_list[5]
+mesh_step_size = mesh_step_size_list[3]
 universe = (-20:mesh_step_size:20, -20:mesh_step_size:20) #(-20:20, -20:20)
 node = (-5:mesh_step_size:5, -5:mesh_step_size:5) # Avec cette taille on a un rayon de 1.0 (-5:5, -5:5)
 
@@ -90,16 +90,16 @@ function (object::RectangleTrou{3})(x, y, z)
 end
 
 levelset = HyperSphere(R, (a, b))
-#levelset = HyperCuboid{2, Float64}((1.0, 1.0), (0.5, 0.5))
-#levelset = RectangleTrou(R, (a, b))
+#levelset = HyperCuboid{2, Float64}((0.5, 0.5), (0.5, 0.5))
+levelset = RectangleTrou(R, (a, b))
 
 # Cut cells Init:
 cut_cells = get_cut_cells(levelset, xyz)
-cut_cells_boundary = create_boundary(cut_cells, length(xyz[1]), length(xyz[2]), 0.0)
+cut_cells_boundary = create_boundary(cut_cells, length(xyz[1]), length(xyz[2]), 1.0)
 
 # Border Init
 border_cells = get_border_cells(xyz)
-border_cells_boundary = create_boundary(border_cells, length(xyz[1]), length(xyz[2]), 0.0)
+border_cells_boundary = create_boundary(border_cells, length(xyz[1]), length(xyz[2]),1.0)
 
 # calculate first and second order moments
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(levelset, xyz)
@@ -126,7 +126,7 @@ barx = bary[mid]
 # Dirichlet boundary conditions
 # Forcing function
 function f_omega(x, y)
-    return 4.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
+    return 0.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
 end
 
 # Analytic solution
@@ -143,6 +143,17 @@ p_omega_without_cutcells = [value for (i, value) in enumerate(p_omega) if !(i in
 x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells,border_cells_boundary)
 x_dirichlet_without_cutcells = [value for (i, value) in enumerate(x_dirichlet) if !(i in cut_cells)]
 
+solid_indices, fluid_indices, cut_cell_indices = get_volume_indices(V, maximum(V))
+
+sol_approx_fluid = [x_dirichlet[i] for i in fluid_indices]
+sol_approx_solid = [x_dirichlet[i] for i in solid_indices]
+sol_approx_cut_cell = [x_dirichlet[i] for i in cut_cell_indices]
+
+sol_true_fluid = [p_omega[i] for i in fluid_indices]
+sol_true_solid = [p_omega[i] for i in solid_indices]
+sol_true_cut_cell = [p_omega[i] for i in cut_cell_indices]
+
+
 x_dirichlet_matrix = reshape(x_dirichlet, (nx, ny))
 heatmap(x_dirichlet_matrix, title="Poisson Equation - Dirichlet BC", aspect_ratio=1)
 readline()
@@ -151,18 +162,28 @@ x_analytic_matrix = reshape(p_omega, (nx, ny))
 heatmap(x_analytic_matrix, title="Analytic Solution", aspect_ratio=1)
 readline()
 
+
 diff = x_dirichlet - p_omega
+
+"""
 diff_matrix = reshape(diff, (nx, ny))
 heatmap(diff_matrix, title="Difference between Dirichlet and Analytic Solution", aspect_ratio=1)
 readline()
+"""
 
-l2_norm_error = volume_integrated_p_norm(x_dirichlet, p_omega, V, 2.0)
+l2_norm_error = volume_integrated_p_norm(x_dirichlet, p_omega, V, Inf)
 @show l2_norm_error
+@show norm(x_dirichlet-p_omega, Inf)
 
-V_without_cutcells = [value for (i, value) in enumerate(V) if !(i in cut_cells)]
-@show volume_integrated_p_norm(x_dirichlet_without_cutcells, p_omega_without_cutcells, V_without_cutcells, 2.0)
+V_fluid = [V[i] for i in fluid_indices]
+l2_norm_error_fluid = volume_integrated_p_norm(sol_approx_fluid, sol_true_fluid, V_fluid, Inf)
+@show l2_norm_error_fluid
+@show norm(sol_approx_fluid-sol_true_fluid, Inf)
 
-
+V_cut_cell = [V[i] for i in cut_cell_indices]
+l2_norm_error_cut_cell = volume_integrated_p_norm(sol_approx_cut_cell, sol_true_cut_cell, V_cut_cell, Inf)
+@show l2_norm_error_cut_cell
+@show norm(sol_approx_cut_cell-sol_true_cut_cell, Inf)
 """
 # Neumann boundary conditions
 # Il faut imposer une condition en plus

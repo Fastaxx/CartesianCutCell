@@ -46,7 +46,7 @@ cut_cells_boundary_complement = create_boundary(cut_cells_complement, nx, ny, 0.
 
 # Border Init : 
 border_cells = get_border_cells(mesh)
-border_cells_boundary = create_boundary(border_cells, nx, ny, 1.0)
+border_cells_boundary = create_boundary(border_cells, nx, ny, 0.0)
 
 # calculate first and second order moments for the circle
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(circle.sdf_function, mesh)
@@ -80,7 +80,7 @@ Wdagger_complement = sparse_inverse(w_diag_complement)
 # Dirichlet boundary conditions
 # Forcing function
 function f_omega(x, y)
-    return 4.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
+    return 0.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
 end
 
 # Analytic solution
@@ -94,9 +94,6 @@ p_omega = [circle.sdf_function(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary]
 
 g_gamma_complement = cut_cells_boundary_complement + border_cells_boundary
 p_omega_complement = [circle_complement.sdf_function(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary_complement]
-
-
-
 
 
 """
@@ -137,10 +134,12 @@ function build_block_matrix_system(G1, GT1, Wdagger1, H1, HT1, G2, GT2, Wdagger2
     zero_block1 = zeros(size(block1))
     zero_block2 = zeros(size(block7))
     
+    line1 = hcat(block7, zero_block1, block6)
+    line2 = hcat(zero_block2, block1, block2)
+    line3 = hcat(block5, block3, block4)
+
     # Construire la matrice en blocs
-    A = [block1 block2 zero_block1;
-         block3 block4 block5;
-         zero_block2 block6 block7];
+    A = vcat(line1, line2, line3)
 
     return A
 end
@@ -152,33 +151,53 @@ function build_rhs_vector(V1, f_omega1, V2, f_omega2)
     block3 = V2 * f_omega2
 
     # Construire le vecteur de droite
-    b = [block1; block2; block3]
+    b = vcat(block3, block1, block2)
 
     return b
 end
 
-function solve_block_matrix_system(A, b)
+function solve_block_matrix_system(A, b, border_cells, border_cells_boundary)
+    
+    for (i, cell) in enumerate(border_cells)
+        linear_index = LinearIndices((nx, ny))[cell]
+        A[linear_index, :] .= 0
+        A[linear_index, linear_index] = 1
+        b[linear_index] = border_cells_boundary[linear_index]
+    end
+
     # Résoudre le système linéaire
     x = gmres(A, b)
 
     return x
 end
 
+# Forcing function
+function f_omega_1(x, y)
+    return 4.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
+end
+
+function f_omega_2(x, y)
+    return 8.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
+end
+
+f_omega_values_1 = [f_omega_1(x, y) for (x, y) in bary]
+f_omega_values_2 = [f_omega_2(x, y) for (x, y) in bary_complement]
+
 # Blocs de la matrice
 A = build_block_matrix_system(G, GT, Wdagger, H, HT, G_complement, GT_complement, Wdagger_complement, H_complement, HT_complement)
-rhs = build_rhs_vector(v_diag, f_omega_values, v_diag_complement, f_omega_values)
-sol = solve_block_matrix_system(A, rhs)
+rhs = build_rhs_vector(v_diag, f_omega_values_1, v_diag_complement, f_omega_values_2)
+sol = solve_block_matrix_system(A, rhs, border_cells, border_cells_boundary)
 
 # Extraire T_1, T_1_g, T_2 du vecteur solution
 mid = length(sol) ÷ 3
-T_1 = sol[1:mid]
+T_2 = sol[1:mid]
 T_1_g = sol[mid+1:2*mid]
-T_2 = sol[2*mid+1:end]
+T_1 = sol[2*mid+1:end]
 
 # Reshape les solutions en matrices
-T_1_matrix = reshape(T_1, (nx, ny))
+T_2_matrix = reshape(T_1, (nx, ny))
 T_1_g_matrix = reshape(T_1_g, (nx, ny))
-T_2_matrix = reshape(T_2, (nx, ny))
+T_1_matrix = reshape(T_2, (nx, ny))
 
 # Créer les heatmaps
 p1 = heatmap(T_1_matrix, title="Poisson Equation - T_1", aspect_ratio=1)

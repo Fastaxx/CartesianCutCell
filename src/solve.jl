@@ -13,7 +13,7 @@ function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_g
         b[linear_index] = border_cells_boundary[linear_index]
     end
 
-    x = bicgstabl(A, b) # Solve Ax = b
+    x = gmres(A, b) # Solve Ax = b
     return x
 end
 
