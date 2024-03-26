@@ -86,3 +86,18 @@ function build_igamma(HT::SparseMatrixCSC)
 
     return Igamma
 end
+
+# Définir les structures pour chaque type de condition limite
+struct DirichletCondition
+    value::Union{Function, Float64}
+end
+
+struct NeumannCondition
+    value::Union{Function, Float64}
+end
+
+struct RobinCondition
+    alpha::Union{Function, Float64}
+    beta::Union{Function, Float64}
+    gamma::Union{Function, Float64}
+end

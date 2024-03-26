@@ -1,16 +1,39 @@
 ## Dirichlet Condition
 # Function to solve G^T W^T G pw = Vfw - G^T W^T H gg - Poisson Equation Dirichlet
-function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_gamma, border_cells, border_cells_boundary)
+function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_gamma, border_cells, boundary_conditions)
     A = GT * Wdagger * G  # Construct the matrix A
     b = V * f_omega - GT * Wdagger * H * g_gamma # Construct the vector b
     
-    ## A activer si on veut séparer border/interface
+    left_cells = [cell for cell in border_cells if cell[2] == 1]
+    right_cells = [cell for cell in border_cells if cell[2] == nx-1]
+    top_cells = [cell for cell in border_cells if cell[1] == ny-1]
+    bottom_cells = [cell for cell in border_cells if cell[1] == 1]
+
     # Modify A and b for each border cell
     for (i, cell) in enumerate(border_cells)
         linear_index = LinearIndices((nx, ny))[cell]
-        A[linear_index, :] .= 0
-        A[linear_index, linear_index] = 1
-        b[linear_index] = border_cells_boundary[linear_index]
+
+        # Apply boundary conditions
+        if cell in left_cells
+            condition = boundary_conditions["left"]
+        elseif cell in right_cells
+            condition = boundary_conditions["right"]
+        elseif cell in top_cells
+            condition = boundary_conditions["top"]
+        elseif cell in bottom_cells
+            condition = boundary_conditions["bottom"]
+        end
+
+        if condition isa DirichletCondition
+            A[linear_index, :] .= 0
+            A[linear_index, linear_index] = 1
+            b[linear_index] = isa(condition.value, Function) ? condition.value(cell...) : condition.value
+        elseif condition isa NeumannCondition
+            A[linear_index, linear_index] = 1
+            b[linear_index] -= isa(condition.value, Function) ? condition.value(cell...) : condition.value
+        elseif condition isa RobinCondition
+            # Implement Robin condition
+        end
     end
 
     x = gmres(A, b) # Solve Ax = b

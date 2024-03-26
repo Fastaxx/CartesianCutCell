@@ -46,7 +46,12 @@ cut_cells_boundary_complement = create_boundary(cut_cells_complement, nx, ny, 0.
 
 # Border Init : 
 border_cells = get_border_cells(mesh)
-border_cells_boundary = create_boundary(border_cells, nx, ny, 0.0)
+boundary_conditions = Dict(
+    "left" => DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
+    "right" => DirichletCondition(0.0),  # Remplacer par la condition de bord droite
+    "top" => DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
+    "bottom" => DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
+)
 
 # calculate first and second order moments for the circle
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(circle.sdf_function, mesh)
@@ -89,10 +94,10 @@ function p(x, y)
 end
 
 f_omega_values = [f_omega(x, y) for (x, y) in bary]
-g_gamma = cut_cells_boundary + border_cells_boundary
+g_gamma = cut_cells_boundary
 p_omega = [circle.sdf_function(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary]
 
-g_gamma_complement = cut_cells_boundary_complement + border_cells_boundary
+g_gamma_complement = cut_cells_boundary_complement
 p_omega_complement = [circle_complement.sdf_function(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary_complement]
 
 
@@ -108,7 +113,7 @@ function f_omega(x, y)
 end
 
 f_omega_values = [f_omega(x, y) for (x, y) in bary]
-g_gamma = cut_cells_boundary + border_cells_boundary
+g_gamma = cut_cells_boundary
 
 x_robin_w, x_robin_g = solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, v_diag, f_omega_values, IGamma, g_gamma)
 
@@ -196,13 +201,37 @@ function build_rhs_vector2(V1, f_omega1, V2, f_omega2)
     return b
 end
 
-function solve_block_matrix_system(A, b, border_cells, border_cells_boundary)
+function solve_block_matrix_system(A, b, border_cells, boundary_conditions)
     
+    left_cells = [cell for cell in border_cells if cell[2] == 1]
+    right_cells = [cell for cell in border_cells if cell[2] == nx-1]
+    top_cells = [cell for cell in border_cells if cell[1] == ny-1]
+    bottom_cells = [cell for cell in border_cells if cell[1] == 1]
+
+    # Modify A and b for each border cell
     for (i, cell) in enumerate(border_cells)
         linear_index = LinearIndices((nx, ny))[cell]
-        A[linear_index, :] .= 0
-        A[linear_index, linear_index] = 1
-        b[linear_index] = border_cells_boundary[linear_index]
+
+        # Apply boundary conditions
+        if cell in left_cells
+            condition = boundary_conditions["left"]
+        elseif cell in right_cells
+            condition = boundary_conditions["right"]
+        elseif cell in top_cells
+            condition = boundary_conditions["top"]
+        elseif cell in bottom_cells
+            condition = boundary_conditions["bottom"]
+        end
+
+        if condition isa DirichletCondition
+            A[linear_index, :] .= 0
+            A[linear_index, linear_index] = 1
+            b[linear_index] = isa(condition.value, Function) ? condition.value(cell...) : condition.value
+        elseif condition isa NeumannCondition
+            # Implement Neumann condition
+        elseif condition isa RobinCondition
+            # Implement Robin condition
+        end
     end
 
     # Résoudre le système linéaire
@@ -210,13 +239,38 @@ function solve_block_matrix_system(A, b, border_cells, border_cells_boundary)
 
     return x
 end
-function solve_block_matrix_system2(A, b, border_cells, border_cells_boundary)
+function solve_block_matrix_system2(A, b, border_cells, boundary_conditions)
+    left_cells = [cell for cell in border_cells if cell[2] == 1]
+    right_cells = [cell for cell in border_cells if cell[2] == nx-1]
+    top_cells = [cell for cell in border_cells if cell[1] == ny-1]
+    bottom_cells = [cell for cell in border_cells if cell[1] == 1]
+
+    # Modify A and b for each border cell
     for (i, cell) in enumerate(border_cells)
         linear_index = LinearIndices((nx, ny))[cell]
-        A[linear_index, :] .= 0
-        A[linear_index, linear_index] = 1
-        b[linear_index] = border_cells_boundary[linear_index]
+
+        # Apply boundary conditions
+        if cell in left_cells
+            condition = boundary_conditions["left"]
+        elseif cell in right_cells
+            condition = boundary_conditions["right"]
+        elseif cell in top_cells
+            condition = boundary_conditions["top"]
+        elseif cell in bottom_cells
+            condition = boundary_conditions["bottom"]
+        end
+
+        if condition isa DirichletCondition
+            A[linear_index, :] .= 0
+            A[linear_index, linear_index] = 1
+            b[linear_index] = isa(condition.value, Function) ? condition.value(cell...) : condition.value
+        elseif condition isa NeumannCondition
+            # Implement Neumann condition
+        elseif condition isa RobinCondition
+            # Implement Robin condition
+        end
     end
+
     # Résoudre le système linéaire
     x = bicgstabl(A, b) 
 
@@ -238,7 +292,7 @@ f_omega_values_2 = [f_omega_2(x, y) for (x, y) in bary_complement]
 # Blocs de la matrice
 A = build_block_matrix_system(G, GT, Wdagger, H, HT, G_complement, GT_complement, Wdagger_complement, H_complement, HT_complement)
 rhs = build_rhs_vector(v_diag, f_omega_values_1, v_diag_complement, f_omega_values_2)
-sol = solve_block_matrix_system(A, rhs, border_cells, border_cells_boundary)
+sol = solve_block_matrix_system(A, rhs, border_cells, boundary_conditions)
 
 # Extraire T_2_w, T_2_g, T_1_w, T_1_g du vecteur solution
 T_2_w = sol[1:nx*ny]
@@ -294,12 +348,12 @@ function p_carre(x, y)
 end
 
 f_omega_values_carre = [f_omega_carre(x, y) for (x, y) in bary_carre]
-g_gamma_carre = cut_cells_boundary_carre + border_cells_boundary
+g_gamma_carre = cut_cells_boundary_carre
 
 p_omega_carre = [carre.sdf_function(x, y) > 0 ? 0 : p_carre(x, y) for (x, y) in bary_carre]
 
 # Blocs de la matrice
-x_carre = solve_Ax_b_poisson(nx, ny, G_carre, GT_carre, Wdagger_carre, H_carre, v_diag_carre, f_omega_values_carre, g_gamma_carre, border_cells, border_cells_boundary)
+x_carre = solve_Ax_b_poisson(nx, ny, G_carre, GT_carre, Wdagger_carre, H_carre, v_diag_carre, f_omega_values_carre, g_gamma_carre, border_cells, boundary_conditions)
 
 x_carre_matrix = reshape(x_carre, (nx, ny))
 heatmap(x_carre_matrix, title = "Heatmap of Carree solution")

@@ -99,7 +99,14 @@ cut_cells_boundary = create_boundary(cut_cells, length(xyz[1]), length(xyz[2]), 
 
 # Border Init
 border_cells = get_border_cells(xyz)
-border_cells_boundary = create_boundary(border_cells, length(xyz[1]), length(xyz[2]),0.0)
+
+# Définir les conditions de bord
+boundary_conditions = Dict(
+    "left" => DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
+    "right" => DirichletCondition(0.0),  # Remplacer par la condition de bord droite
+    "top" => DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
+    "bottom" => DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
+)
 
 # calculate first and second order moments
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(levelset, xyz)
@@ -135,12 +142,12 @@ function p(x, y)
 end
 
 f_omega_values = [f_omega(x, y) for (x, y) in bary]
-g_gamma = cut_cells_boundary + border_cells_boundary
+g_gamma = cut_cells_boundary
 
 p_omega = [levelset(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary]
 p_omega_without_cutcells = [value for (i, value) in enumerate(p_omega) if !(i in cut_cells)]
 
-x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells,border_cells_boundary)
+x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells,boundary_conditions)
 x_dirichlet_without_cutcells = [value for (i, value) in enumerate(x_dirichlet) if !(i in cut_cells)]
 
 solid_indices, fluid_indices, cut_cell_indices = get_volume_indices(V, maximum(V))

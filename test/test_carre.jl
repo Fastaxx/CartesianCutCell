@@ -26,7 +26,7 @@ ny = length(y)
 domain = ((minimum(x), minimum(y)), (maximum(x), maximum(y)))
 carre = SignedDistanceFunction((x, y, _=0) -> max(abs(x-0.5), abs(y-0.5)) - 0.25 , domain)
 circle = SignedDistanceFunction((x, y, _=0) -> sqrt((x-0.5)^2+(y-0.5)^2) - 0.25 , domain)
-#circle1 = CartesianLevelSet.complement(circle1)
+circle = CartesianLevelSet.complement(circle)
 
 values = evaluate_levelset(circle.sdf_function, mesh)
 cut_cells = CartesianLevelSet.get_cut_cells(values)
@@ -39,7 +39,14 @@ cut_cells_boundary = create_boundary(cut_cells, length(x), length(y), 1.0)
 
 # Border Init
 border_cells = get_border_cells(mesh)
-border_cells_boundary = create_boundary(border_cells, length(x), length(y), 1.0)
+
+# Définir les conditions de bord
+boundary_conditions = Dict(
+    "left" => NeumannCondition(1.0),  # Remplacer par la condition de bord gauche
+    "right" => NeumannCondition(0.0),  # Remplacer par la condition de bord droite
+    "top" => NeumannCondition(0.0),  # Remplacer par la condition de bord supérieure
+    "bottom" => NeumannCondition(0.0)  # Remplacer par la condition de bord inférieure
+)
 
 # calculate first and second order moments
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(circle.sdf_function, mesh)
@@ -76,12 +83,12 @@ end
 
 
 f_omega_values = [f_omega(x, y) for (x, y) in bary]
-g_gamma = cut_cells_boundary + border_cells_boundary
+g_gamma = cut_cells_boundary
 
 p_omega = [circle.sdf_function(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary]
 p_omega_without_cutcells = [value for (i, value) in enumerate(p_omega) if !(i in cut_cells)]
 
-x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells,border_cells_boundary)
+x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells,boundary_conditions)
 
 x_dirichlet_matrix = reshape(x_dirichlet, (nx, ny))
 heatmap(x_dirichlet_matrix, title = "Heatmap of Dirichlet solution")
