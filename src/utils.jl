@@ -52,3 +52,19 @@ function cut_cell_statistics(V, cut_cell_indices)
 
     return num_cut_cells, percentage_cut_cells, percentage_uncut_cells, total_volume, mean_volume, min_volume, max_volume, std_dev_volume, median_volume
 end
+
+function calculate_angles(bary, cut_cells, nx, ny, centre_cercle)
+    # Convertir les indices CartesianIndex en indices linéaires
+    linear_indices = [LinearIndices((nx, ny))[i] for i in cut_cells]
+
+    # Récupérer les valeurs correspondantes de bary
+    bary_cut_cells = bary[linear_indices]
+
+    # Calculer les angles
+    angles = [Base.atan(bary[2] - centre_cercle[2], bary[1] - centre_cercle[1]) for bary in bary_cut_cells]
+
+    # Convertir en degrés
+    angles_deg = Base.rad2deg.(angles)
+
+    return angles_deg
+end

@@ -139,14 +139,14 @@ function Ky(u_γ, Sy_minus, HT)
     return Sy_minus * diagm(0 => (HT * u_γ))
 end
 
-function convx(Dx_minus, Dy_minus, Sx_plus, Sy_plus, Sx_minus, Ax, Ay, HT, u_γ, qγ_x, qγ_y, ux_ω, uy_ω)
-    term1 = Cx(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay) * qγ_x
-    term2 = Kx(u_γ, Sx_minus, HT) * (qγ_x+qγ_y)/2
+function convx(Dx_minus, Dy_minus, Sx_plus, Sy_plus, Sx_minus, Ax, Ay, HT, u_γ, qw_x, qγ_x, ux_ω, uy_ω)
+    term1 = Cx(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay) * qw_x
+    term2 = Kx(u_γ, Sx_minus, HT) * (qw_x+qγ_x)/2
     return term1 + term2 
 end
 
-function convy(Dx_minus, Dy_minus, Sx_plus, Sy_plus, Sx_minus, Ax, Ay, HT, u_γ, qγ_x, qγ_y, ux_ω, uy_ω)
-    term1 = Cy(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay) * qγ_y
-    term2 = Ky(u_γ, Sy_minus, HT) * (qγ_x+qγ_y)/2
+function convy(Dx_minus, Dy_minus, Sx_plus, Sy_plus, Sy_minus, Ax, Ay, HT, u_γ, qw_y, qγ_y, ux_ω, uy_ω)
+    term1 = Cy(ux_ω, uy_ω,  Dx_minus, Sx_plus, Ax, Dy_minus, Sy_plus, Ay) * qw_y
+    term2 = Ky(u_γ, Sy_minus, HT) * (qw_y+qγ_y)/2
     return term1 + term2 
 end

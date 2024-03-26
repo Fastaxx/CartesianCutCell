@@ -110,3 +110,37 @@ function solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, V, f_omega, IGamma, g_g
 
     return p_ω, p_γ
 end
+
+function solve_system(V, G, GT, Wdagger, H, T_w_0, T_g_0, delta_t, t_end)
+    # Initialiser les solutions
+    T_w = T_w_0
+    T_g = T_g_0
+
+    # Construire la matrice A
+    block1 = V + delta_t/2 * GT * Wdagger * G
+    block2 = delta_t/2 * GT * Wdagger * H
+    block3 = zeros(size(block2))
+    block4 = ones(size(block2))
+
+    A = [block1 block2; block3 block4]
+
+    # Boucle sur le temps
+    t = 0.0
+    while t < t_end
+        @show t
+        # Construire le vecteur b
+        b = [(V - delta_t/2 * GT * Wdagger * G) * T_w - delta_t/2 * GT * Wdagger * H * T_g; 
+             T_g]
+
+        # Résoudre le système Ax = b
+        T = cg(A, b)
+
+        # Mettre à jour les solutions
+        T_w = T[1:size(T_w_0)[1]]
+        T_g = T[(size(T_w_0)[1] + 1):end]
+        # Mettre à jour le temps
+        t += delta_t
+    end
+
+    return T_w, T_g
+end

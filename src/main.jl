@@ -17,7 +17,7 @@ include("utils.jl")
 include("plot.jl")
 
 mesh_step_size_list = [2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125]
-mesh_step_size = mesh_step_size_list[3]
+mesh_step_size = mesh_step_size_list[2]
 universe = (-20:mesh_step_size:20, -20:mesh_step_size:20) #(-20:20, -20:20)
 node = (-5:mesh_step_size:5, -5:mesh_step_size:5) # Avec cette taille on a un rayon de 1.0 (-5:5, -5:5)
 
@@ -91,15 +91,15 @@ end
 
 levelset = HyperSphere(R, (a, b))
 #levelset = HyperCuboid{2, Float64}((0.5, 0.5), (0.5, 0.5))
-levelset = RectangleTrou(R, (a, b))
+#levelset = RectangleTrou(R, (a, b))
 
 # Cut cells Init:
 cut_cells = get_cut_cells(levelset, xyz)
-cut_cells_boundary = create_boundary(cut_cells, length(xyz[1]), length(xyz[2]), 1.0)
+cut_cells_boundary = create_boundary(cut_cells, length(xyz[1]), length(xyz[2]), 0.0)
 
 # Border Init
 border_cells = get_border_cells(xyz)
-border_cells_boundary = create_boundary(border_cells, length(xyz[1]), length(xyz[2]),1.0)
+border_cells_boundary = create_boundary(border_cells, length(xyz[1]), length(xyz[2]),0.0)
 
 # calculate first and second order moments
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(levelset, xyz)
@@ -126,7 +126,7 @@ barx = bary[mid]
 # Dirichlet boundary conditions
 # Forcing function
 function f_omega(x, y)
-    return 0.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
+    return 4.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
 end
 
 # Analytic solution
@@ -153,7 +153,6 @@ sol_true_fluid = [p_omega[i] for i in fluid_indices]
 sol_true_solid = [p_omega[i] for i in solid_indices]
 sol_true_cut_cell = [p_omega[i] for i in cut_cell_indices]
 
-
 x_dirichlet_matrix = reshape(x_dirichlet, (nx, ny))
 heatmap(x_dirichlet_matrix, title="Poisson Equation - Dirichlet BC", aspect_ratio=1)
 readline()
@@ -171,19 +170,22 @@ heatmap(diff_matrix, title="Difference between Dirichlet and Analytic Solution",
 readline()
 """
 
-l2_norm_error = volume_integrated_p_norm(x_dirichlet, p_omega, V, Inf)
+l2_norm_error = volume_integrated_p_norm(x_dirichlet, p_omega, V, 2)
 @show l2_norm_error
-@show norm(x_dirichlet-p_omega, Inf)
+@show norm(x_dirichlet-p_omega, 2)
 
 V_fluid = [V[i] for i in fluid_indices]
-l2_norm_error_fluid = volume_integrated_p_norm(sol_approx_fluid, sol_true_fluid, V_fluid, Inf)
+l2_norm_error_fluid = volume_integrated_p_norm(sol_approx_fluid, sol_true_fluid, V_fluid, 2)
 @show l2_norm_error_fluid
-@show norm(sol_approx_fluid-sol_true_fluid, Inf)
+@show norm(sol_approx_fluid-sol_true_fluid, 2)
 
 V_cut_cell = [V[i] for i in cut_cell_indices]
-l2_norm_error_cut_cell = volume_integrated_p_norm(sol_approx_cut_cell, sol_true_cut_cell, V_cut_cell, Inf)
+l2_norm_error_cut_cell = volume_integrated_p_norm(sol_approx_cut_cell, sol_true_cut_cell, V_cut_cell, 2)
 @show l2_norm_error_cut_cell
-@show norm(sol_approx_cut_cell-sol_true_cut_cell, Inf)
+@show norm(sol_approx_cut_cell-sol_true_cut_cell, 2)
+
+
+
 """
 # Neumann boundary conditions
 # Il faut imposer une condition en plus
@@ -202,4 +204,59 @@ x_robin_w, x_robin_g = solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, v_diag, f
 x_robin_matrix = reshape(x_robin_w, (nx, ny))
 heatmap(x_robin_matrix, title="Poisson Equation - Robin BC", aspect_ratio=1)
 readline()
+"""
+"""
+# Calcul du gradient numérique
+grad = compute_grad_operator(x_dirichlet, zeros(nx*ny), Wdagger, G, H)
+
+grad_x_true = [levelset(x, y) > 0 ? 0 : -2.0*(x-a) for (x, y) in bary]
+grad_y_true = [levelset(x, y) > 0 ? 0 : -2.0*(y-b) for (x, y) in bary]
+
+mid = length(grad) ÷ 2
+grad_x = grad[1:mid]
+grad_y = grad[mid+1:end]
+
+
+grad_x_matrix = reshape(grad_x, (nx, ny))'
+heatmap(grad_x_matrix, title="Gradient X Operator", aspect_ratio=1)
+readline()
+
+grad_x_true_matrix = reshape(grad_x_true, (nx, ny))'
+heatmap(grad_x_true_matrix, title="Gradient X True", aspect_ratio=1)
+readline()
+
+grad_y_matrix = reshape(grad_y, (nx, ny))'
+heatmap(grad_y_matrix, title="Gradient Y Operator", aspect_ratio=1)
+readline()
+
+grad_y_true_matrix = reshape(grad_y_true, (nx, ny))'
+heatmap(grad_y_true_matrix, title="Gradient Y True", aspect_ratio=1)
+readline()
+
+l2_norm_error_grad_x = volume_integrated_p_norm(grad_x, grad_x_true, V, 2)
+@show l2_norm_error_grad_x
+
+l2_norm_error_grad_y = volume_integrated_p_norm(grad_y, grad_y_true, V, 2)
+@show l2_norm_error_grad_y
+
+grad_x_fluid = [grad_x[i] for i in fluid_indices]
+grad_x_true_fluid = [grad_x_true[i] for i in fluid_indices]
+l2_norm_error_grad_x_fluid = volume_integrated_p_norm(grad_x_fluid, grad_x_true_fluid, V_fluid, 2)
+@show l2_norm_error_grad_x_fluid
+
+grad_y_fluid = [grad_y[i] for i in fluid_indices]
+grad_y_true_fluid = [grad_y_true[i] for i in fluid_indices]
+l2_norm_error_grad_y_fluid = volume_integrated_p_norm(grad_y_fluid, grad_y_true_fluid, V_fluid, 2)
+@show l2_norm_error_grad_y_fluid
+
+grad_x_cut_cell = [grad_x[i] for i in cut_cell_indices]
+grad_x_true_cut_cell = [grad_x_true[i] for i in cut_cell_indices]
+l2_norm_error_grad_x_cut_cell = volume_integrated_p_norm(grad_x_cut_cell, grad_x_true_cut_cell, V_cut_cell, 2)
+@show l2_norm_error_grad_x_cut_cell
+
+grad_y_cut_cell = [grad_y[i] for i in cut_cell_indices]
+grad_y_true_cut_cell = [grad_y_true[i] for i in cut_cell_indices]
+l2_norm_error_grad_y_cut_cell = volume_integrated_p_norm(grad_y_cut_cell, grad_y_true_cut_cell, V_cut_cell, 2)
+@show l2_norm_error_grad_y_cut_cell
+
 """

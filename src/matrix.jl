@@ -1,4 +1,3 @@
-using SparseArrays
 function backward_difference_matrix_sparse(n::Int)
     D_sparse = spdiagm(0 => ones(n), -1 => -ones(n-1))
     D_sparse[n, n] = 0.0
