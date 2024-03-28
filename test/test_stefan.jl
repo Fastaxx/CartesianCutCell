@@ -16,16 +16,16 @@ include("../src/utils.jl")
 include("../src/mesh.jl")
 
 # Domain
-mesh_step_size_list = [3., 2., 1., 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125]
-mesh_step_size = mesh_step_size_list[1]
-grid = CartesianGrid((80, 80) , (mesh_step_size, mesh_step_size))
+grid = CartesianGrid((40, 40) , (2.0, 2.0))
 mesh = CartesianLevelSet.generate_mesh(grid, false) # Génère un maillage 
 x, y = mesh
 nx, ny = length(x), length(y)
+dx, dy = 1/nx, 1/ny
 @show nx*ny
 
+a,b = 1.0, 1.0
 domain = ((minimum(x), minimum(y)), (maximum(x), maximum(y)))
-circle = SignedDistanceFunction((x, y, _=0) -> sqrt((x-1.5)^2+(y-1.5)^2) - 0.5 , domain)
+circle = SignedDistanceFunction((x, y, _=0) -> sqrt((x-a)^2+(y-b)^2) - 0.5 , domain)
 circle_complement = CartesianLevelSet.complement(circle)
 
 # Cut cells Circle Init:
@@ -81,49 +81,6 @@ H_complement = build_matrix_H(nx, ny, Delta_x_minus, Delta_y_minus, ax_diag_comp
 HT_complement = build_matrix_H_T(nx, ny, Delta_x_plus, Delta_y_plus, ax_diag_complement, ay_diag_complement, bx_diag_complement, by_diag_complement)
 Wdagger_complement = sparse_inverse(w_diag_complement)
 
-
-# Dirichlet boundary conditions
-# Forcing function
-function f_omega(x, y)
-    return 0.0 #2*pi^4*sin(2*pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
-end
-
-# Analytic solution
-function p(x, y)
-    return 1-(x-1.5)^2-(y-1.5)^2 #cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))  
-end
-
-f_omega_values = [f_omega(x, y) for (x, y) in bary]
-g_gamma = cut_cells_boundary
-p_omega = [circle.sdf_function(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary]
-
-g_gamma_complement = cut_cells_boundary_complement
-p_omega_complement = [circle_complement.sdf_function(x, y) > 0 ? 0 : p(x, y) for (x, y) in bary_complement]
-
-
-"""
-# Robin boundary conditions
-IGamma = build_igamma(HT)
-Ia = build_diagonal_matrix_sparse(ones(nx*ny))
-Ib = build_diagonal_matrix_sparse(ones(nx*ny))
-
-# Forcing function
-function f_omega(x, y)
-    return 2*pi^4*sin(2*pi^2*(x-1.5)*(y-1.5))*((x-1.5)^2+(y-1.5)^2) 
-end
-
-f_omega_values = [f_omega(x, y) for (x, y) in bary]
-g_gamma = cut_cells_boundary
-
-x_robin_w, x_robin_g = solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, v_diag, f_omega_values, IGamma, g_gamma)
-
-x_robin_matrix = reshape(x_robin_w, (nx, ny))
-heatmap(x_robin_matrix, title="Poisson Equation - Robin BC", aspect_ratio=1)
-readline()
-
-scatter(x_robin_g, title="1D plot of x_robin_g", label="x_robin_g")
-readline()
-"""
 
 function build_block_matrix_system(G1, GT1, Wdagger1, H1, HT1, G2, GT2, Wdagger2, H2, HT2)
     # Construire les blocs de la matrice
@@ -228,15 +185,30 @@ function solve_block_matrix_system(A, b, border_cells, boundary_conditions)
             A[linear_index, linear_index] = 1
             b[linear_index] = isa(condition.value, Function) ? condition.value(cell...) : condition.value
         elseif condition isa NeumannCondition
-            # Implement Neumann condition
+            if cell in left_cells
+                A[linear_index, linear_index] = -1
+                A[linear_index, linear_index + 1] = 1
+            elseif cell in right_cells
+                A[linear_index, linear_index] = -1
+                A[linear_index, linear_index - 1] = 1
+            elseif cell in top_cells
+                A[linear_index, linear_index] = -1
+                A[linear_index, linear_index - nx] = 1  # if row-major
+                # A[linear_index, linear_index - 1] = 1  # if column-major
+            elseif cell in bottom_cells
+                A[linear_index, linear_index] = -1
+                A[linear_index, linear_index + nx] = 1  # if row-major
+                # A[linear_index, linear_index + 1] = 1  # if column-major
+            end
+            b[linear_index] -= isa(condition.value, Function) ? condition.value(cell...) : condition.value
+        elseif condition isa PeriodicCondition
+            # Implement Periodic condition
         elseif condition isa RobinCondition
             # Implement Robin condition
         end
     end
 
-    # Résoudre le système linéaire
-    x = cg(A, b)
-
+    x = bicgstabl(A, b) # Solve Ax = b
     return x
 end
 function solve_block_matrix_system2(A, b, border_cells, boundary_conditions)
@@ -277,13 +249,17 @@ function solve_block_matrix_system2(A, b, border_cells, boundary_conditions)
     return x
 end
 
+# Interface condition #Inutile si T1g=T2g dans le cas equilibre
+g_gamma = cut_cells_boundary
+g_gamma_complement = cut_cells_boundary_complement
+
 # Forcing function
 function f_omega_1(x, y)
-    return 2*pi^4*sin(2*pi^2*(x-1.5)*(y-1.5))*((x-1.5)^2+(y-1.5)^2) 
+    return 4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
 end
 
 function f_omega_2(x, y)
-    return 2*pi^4*sin(2*pi^2*(x-1.5)*(y-1.5))*((x-1.5)^2+(y-1.5)^2) 
+    return 4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
 end
 
 f_omega_values_1 = [f_omega_1(x, y) for (x, y) in bary]
@@ -316,7 +292,7 @@ plot(p1, p2, p3, layout = (1, 3), size = (1200, 400), title = ["T_2_w" "T_1_w" "
 readline()
 
 # Comparaison Carrée
-carre = SignedDistanceFunction((x, y, _=0) -> max(abs(x-1.5), abs(y-1.5)) - 2, domain)
+carre = SignedDistanceFunction((x, y, _=0) -> max(abs(x-a), abs(y-b)) - 2, domain)
 values_carre = evaluate_levelset(carre.sdf_function, mesh)
 cut_cells_carre = CartesianLevelSet.get_cut_cells(values_carre)
 intersection_points_carre = get_intersection_points(values_carre, cut_cells_carre)
@@ -339,12 +315,12 @@ Wdagger_carre = sparse_inverse(w_diag_carre)
 # Dirichlet boundary conditions
 # Forcing function
 function f_omega_carre(x, y)
-    return 2*pi^4*sin(2*pi^2*(x-1.5)*(y-1.5))*((x-1.5)^2+(y-1.5)^2)  
+    return 4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2)  
 end
 
 # Analytic solution
 function p_carre(x, y)
-    return 1-(x-1.5)^2-(y-1.5)^2 #cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))  
+    return cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))  
 end
 
 f_omega_values_carre = [f_omega_carre(x, y) for (x, y) in bary_carre]
@@ -365,12 +341,23 @@ diff_matrix = reshape(diff, (nx, ny))
 heatmap(diff_matrix, title = "Difference between Carre and Stefan solution", aspect_ratio = 1)
 readline()
 
-error = volume_integrated_p_norm(x_carre, T_2_w + T_1_w - T_1_g, V_carre, 2)
+p_omega = [p_carre(x, y) for (x, y) in bary_carre]
+
+error = volume_integrated_p_norm(p_omega, T_2_w + T_1_w - T_1_g, V_carre, Inf)
+@show error
+
+max_volume = maximum(V)
+solid_indices, fluid_indices, cut_cells_indices = get_volume_indices(V, max_volume)
+V_cut_cells = [V[index] for index in cut_cells_indices]
+p_omega_cut_cells = [p_omega[index] for index in cut_cells_indices]
+T_2_w_cut_cells = [T_2_w[index] for index in cut_cells_indices]
+T_1_w_cut_cells = [T_1_w[index] for index in cut_cells_indices]
+T_1_g_cut_cells = [T_1_g[index] for index in cut_cells_indices]
+error = volume_integrated_p_norm(p_omega_cut_cells, T_2_w_cut_cells + T_1_w_cut_cells - T_1_g_cut_cells, V_cut_cells, Inf)
 @show error
 
 
-centre_cercle = [1.5, 1.5]
-angles_deg = calculate_angles(bary, cut_cells, nx, ny, centre_cercle)
+angles_deg = calculate_angles(bary, cut_cells, nx, ny, [a,b])
 
 linear_indices = [LinearIndices((nx, ny))[i] for i in cut_cells]
 diff_cut = diff[linear_indices]

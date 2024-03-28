@@ -1,7 +1,7 @@
 function volume_integrated_p_norm(e1, e2, V, p)
     if p == Inf
         total_volume = sum(V)
-        abs_error = abs.(e1 - e2) .* V
+        abs_error = abs.(e1 - e2)
         integral = maximum(abs_error)
         return integral
     else

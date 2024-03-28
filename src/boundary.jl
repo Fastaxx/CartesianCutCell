@@ -47,7 +47,8 @@ function get_border_cells(xyz)
     return border_cells
 end
 
-function get_volume_indices(V, max_volume)
+function get_volume_indices(V)
+    max_volume = maximum(V)
     solid_indices = CartesianIndex[]
     fluid_indices = CartesianIndex[]
     cut_cell_indices = CartesianIndex[]
@@ -94,6 +95,9 @@ end
 
 struct NeumannCondition
     value::Union{Function, Float64}
+end
+
+struct PeriodicCondition
 end
 
 struct RobinCondition

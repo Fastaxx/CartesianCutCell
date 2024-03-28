@@ -42,10 +42,10 @@ border_cells = get_border_cells(mesh)
 
 # Définir les conditions de bord
 boundary_conditions = Dict(
-    "left" => NeumannCondition(1.0),  # Remplacer par la condition de bord gauche
-    "right" => NeumannCondition(0.0),  # Remplacer par la condition de bord droite
-    "top" => NeumannCondition(0.0),  # Remplacer par la condition de bord supérieure
-    "bottom" => NeumannCondition(0.0)  # Remplacer par la condition de bord inférieure
+    "left" => DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
+    "right" => DirichletCondition(0.0),  # Remplacer par la condition de bord droite
+    "top" => DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
+    "bottom" => DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
 )
 
 # calculate first and second order moments
@@ -91,5 +91,5 @@ p_omega_without_cutcells = [value for (i, value) in enumerate(p_omega) if !(i in
 x_dirichlet = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells,boundary_conditions)
 
 x_dirichlet_matrix = reshape(x_dirichlet, (nx, ny))
-heatmap(x_dirichlet_matrix, title = "Heatmap of Dirichlet solution")
+heatmap(x_dirichlet_matrix, title = "Heatmap of Boundary solution")
 readline()

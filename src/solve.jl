@@ -8,6 +8,10 @@ function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_g
     right_cells = [cell for cell in border_cells if cell[2] == nx-1]
     top_cells = [cell for cell in border_cells if cell[1] == ny-1]
     bottom_cells = [cell for cell in border_cells if cell[1] == 1]
+    top_left_corner = [cell for cell in border_cells if cell[1] == ny-1 && cell[2] == 1]
+    top_right_corner = [cell for cell in border_cells if cell[1] == ny-1 && cell[2] == nx-1]
+    bottom_left_corner = [cell for cell in border_cells if cell[1] == 1 && cell[2] == 1]
+    bottom_right_corner = [cell for cell in border_cells if cell[1] == 1 && cell[2] == nx-1]
 
     # Modify A and b for each border cell
     for (i, cell) in enumerate(border_cells)
@@ -29,15 +33,31 @@ function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_g
             A[linear_index, linear_index] = 1
             b[linear_index] = isa(condition.value, Function) ? condition.value(cell...) : condition.value
         elseif condition isa NeumannCondition
-            A[linear_index, linear_index] = 1
+            if cell in left_cells
+                A[linear_index, linear_index] = -1
+                A[linear_index, linear_index + 1] = 1
+            elseif cell in right_cells
+                A[linear_index, linear_index] = -1
+                A[linear_index, linear_index - 1] = 1
+            elseif cell in top_cells
+                A[linear_index, linear_index] = -1
+                A[linear_index, linear_index - nx] = 1  # if row-major
+                # A[linear_index, linear_index - 1] = 1  # if column-major
+            elseif cell in bottom_cells
+                A[linear_index, linear_index] = -1
+                A[linear_index, linear_index + nx] = 1  # if row-major
+                # A[linear_index, linear_index + 1] = 1  # if column-major
+            end
             b[linear_index] -= isa(condition.value, Function) ? condition.value(cell...) : condition.value
+        elseif condition isa PeriodicCondition
+            # Implement Periodic condition
         elseif condition isa RobinCondition
             # Implement Robin condition
         end
     end
 
-    x = gmres(A, b) # Solve Ax = b
-    return x
+    x = bicgstabl(A, b) # Solve Ax = b
+    return x,A
 end
 
 ## Neumann Condition
