@@ -37,11 +37,13 @@ cut_cells_boundary = create_boundary(cut_cells, nx, ny, 0.0)
 
 # Border Init : 
 border_cells = get_border_cells(mesh)
-boundary_conditions = Dict(
-    "left" => DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
-    "right" => DirichletCondition(0.0),  # Remplacer par la condition de bord droite
-    "top" => DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
-    "bottom" => DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
+
+# Définir les conditions de bord
+boundary_conditions = (
+    left = DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
+    right = DirichletCondition(0.0),  # Remplacer par la condition de bord droite
+    top = DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
+    bottom = DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
 )
 
 # calculate first and second order moments for the circle

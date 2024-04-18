@@ -41,11 +41,11 @@ cut_cells_boundary = create_boundary(cut_cells, length(x), length(y), 1.0)
 border_cells = get_border_cells(mesh)
 
 # Définir les conditions de bord
-boundary_conditions = Dict(
-    "left" => DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
-    "right" => DirichletCondition(0.0),  # Remplacer par la condition de bord droite
-    "top" => DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
-    "bottom" => DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
+boundary_conditions = (
+    left = DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
+    right = DirichletCondition(0.0),  # Remplacer par la condition de bord droite
+    top = DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
+    bottom = DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
 )
 
 # calculate first and second order moments

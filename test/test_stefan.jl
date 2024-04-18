@@ -16,7 +16,7 @@ include("../src/utils.jl")
 include("../src/mesh.jl")
 
 # Domain
-grid = CartesianGrid((40, 40) , (2.0, 2.0))
+grid = CartesianGrid((80, 80) , (2.0, 2.0))
 mesh = CartesianLevelSet.generate_mesh(grid, false) # Génère un maillage 
 x, y = mesh
 nx, ny = length(x), length(y)
@@ -46,11 +46,13 @@ cut_cells_boundary_complement = create_boundary(cut_cells_complement, nx, ny, 0.
 
 # Border Init : 
 border_cells = get_border_cells(mesh)
-boundary_conditions = Dict(
-    "left" => DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
-    "right" => DirichletCondition(0.0),  # Remplacer par la condition de bord droite
-    "top" => DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
-    "bottom" => DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
+
+# Définir les conditions de bord
+boundary_conditions = (
+    left = NeumannCondition(0.0),  # Remplacer par la condition de bord gauche
+    right = NeumannCondition(0.0),  # Remplacer par la condition de bord droite
+    top = NeumannCondition(0.0),  # Remplacer par la condition de bord supérieure
+    bottom = NeumannCondition(0.0)  # Remplacer par la condition de bord inférieure
 )
 
 # calculate first and second order moments for the circle
@@ -120,12 +122,12 @@ function build_block_matrix_system2(G1, GT1, Wdagger1, H1, HT1, G2, GT2, Wdagger
     zero_block = zeros(size(block1))
 
     # Créer une matrice de uns de la même taille que block1
-    one_block = ones(size(block1))
+    one_block = sparse(Matrix{Float64}(I, size(block1)))
     minus_one_block = -one_block
 
     line1 = hcat(block1, zero_block, block2, zero_block)
     line2 = hcat(zero_block, block8, zero_block, block7)
-    line3 = hcat(zero_block, zero_block, minus_one_block, one_block)
+    line3 = hcat(zero_block, zero_block, one_block, minus_one_block)
     line4 = hcat(block3, block6, block4, block5) 
 
     # Construire la matrice en blocs
@@ -159,7 +161,6 @@ function build_rhs_vector2(V1, f_omega1, V2, f_omega2)
 end
 
 function solve_block_matrix_system(A, b, border_cells, boundary_conditions)
-    
     left_cells = [cell for cell in border_cells if cell[2] == 1]
     right_cells = [cell for cell in border_cells if cell[2] == nx-1]
     top_cells = [cell for cell in border_cells if cell[1] == ny-1]
@@ -171,13 +172,13 @@ function solve_block_matrix_system(A, b, border_cells, boundary_conditions)
 
         # Apply boundary conditions
         if cell in left_cells
-            condition = boundary_conditions["left"]
+            condition = boundary_conditions.left
         elseif cell in right_cells
-            condition = boundary_conditions["right"]
+            condition = boundary_conditions.right
         elseif cell in top_cells
-            condition = boundary_conditions["top"]
+            condition = boundary_conditions.top
         elseif cell in bottom_cells
-            condition = boundary_conditions["bottom"]
+            condition = boundary_conditions.bottom
         end
 
         if condition isa DirichletCondition
@@ -211,43 +212,7 @@ function solve_block_matrix_system(A, b, border_cells, boundary_conditions)
     x = bicgstabl(A, b) # Solve Ax = b
     return x
 end
-function solve_block_matrix_system2(A, b, border_cells, boundary_conditions)
-    left_cells = [cell for cell in border_cells if cell[2] == 1]
-    right_cells = [cell for cell in border_cells if cell[2] == nx-1]
-    top_cells = [cell for cell in border_cells if cell[1] == ny-1]
-    bottom_cells = [cell for cell in border_cells if cell[1] == 1]
 
-    # Modify A and b for each border cell
-    for (i, cell) in enumerate(border_cells)
-        linear_index = LinearIndices((nx, ny))[cell]
-
-        # Apply boundary conditions
-        if cell in left_cells
-            condition = boundary_conditions["left"]
-        elseif cell in right_cells
-            condition = boundary_conditions["right"]
-        elseif cell in top_cells
-            condition = boundary_conditions["top"]
-        elseif cell in bottom_cells
-            condition = boundary_conditions["bottom"]
-        end
-
-        if condition isa DirichletCondition
-            A[linear_index, :] .= 0
-            A[linear_index, linear_index] = 1
-            b[linear_index] = isa(condition.value, Function) ? condition.value(cell...) : condition.value
-        elseif condition isa NeumannCondition
-            # Implement Neumann condition
-        elseif condition isa RobinCondition
-            # Implement Robin condition
-        end
-    end
-
-    # Résoudre le système linéaire
-    x = bicgstabl(A, b) 
-
-    return x
-end
 
 # Interface condition #Inutile si T1g=T2g dans le cas equilibre
 g_gamma = cut_cells_boundary
@@ -266,19 +231,21 @@ f_omega_values_1 = [f_omega_1(x, y) for (x, y) in bary]
 f_omega_values_2 = [f_omega_2(x, y) for (x, y) in bary_complement]
 
 # Blocs de la matrice
-A = build_block_matrix_system(G, GT, Wdagger, H, HT, G_complement, GT_complement, Wdagger_complement, H_complement, HT_complement)
-rhs = build_rhs_vector(v_diag, f_omega_values_1, v_diag_complement, f_omega_values_2)
+A = build_block_matrix_system2(G, GT, Wdagger, H, HT, G_complement, GT_complement, Wdagger_complement, H_complement, HT_complement)
+rhs = build_rhs_vector2(v_diag, f_omega_values_1, v_diag_complement, f_omega_values_2)
 sol = solve_block_matrix_system(A, rhs, border_cells, boundary_conditions)
 
 # Extraire T_2_w, T_2_g, T_1_w, T_1_g du vecteur solution
 T_2_w = sol[1:nx*ny]
 T_1_w = sol[nx*ny+1:2*nx*ny]
 T_1_g = sol[2*nx*ny+1:3*nx*ny]
+T_2_g = sol[3*nx*ny+1:4*nx*ny]
 
 # Reshape les solutions en matrices
 T_2_matrix = reshape(T_2_w, (nx, ny))
 T_1_matrix = reshape(T_1_w, (nx, ny))
 T_1_g_matrix = reshape(T_1_g, (nx, ny))
+T_2_g_matrix = reshape(T_2_g, (nx, ny))
 
 # Créer les heatmaps
 p1 = heatmap(T_2_matrix, title="T_2_w", aspect_ratio=1)
@@ -287,12 +254,14 @@ p2 = heatmap(T_1_matrix, title="T_1_w", aspect_ratio=1)
 readline()
 p3 = heatmap(T_1_g_matrix, title="T_1_g", aspect_ratio=1)
 readline()
+p4 = heatmap(T_2_g_matrix, title="T_2_g", aspect_ratio=1)
+readline()
 
-plot(p1, p2, p3, layout = (1, 3), size = (1200, 400), title = ["T_2_w" "T_1_w" "T_1_g"], aspect_ratio = 1)
+plot(p1, p2, p3, p4, layout = (1, 4), size = (1200, 400), title = ["T_2_w" "T_1_w" "T_1_g" "T_1_g"], aspect_ratio = 1)
 readline()
 
 # Comparaison Carrée
-carre = SignedDistanceFunction((x, y, _=0) -> max(abs(x-a), abs(y-b)) - 2, domain)
+carre = SignedDistanceFunction((x, y, _=0) -> (x-a)^2 + (y-b)^2 - 25.0, domain)
 values_carre = evaluate_levelset(carre.sdf_function, mesh)
 cut_cells_carre = CartesianLevelSet.get_cut_cells(values_carre)
 intersection_points_carre = get_intersection_points(values_carre, cut_cells_carre)
@@ -332,7 +301,7 @@ p_omega_carre = [carre.sdf_function(x, y) > 0 ? 0 : p_carre(x, y) for (x, y) in 
 x_carre = solve_Ax_b_poisson(nx, ny, G_carre, GT_carre, Wdagger_carre, H_carre, v_diag_carre, f_omega_values_carre, g_gamma_carre, border_cells, boundary_conditions)
 
 x_carre_matrix = reshape(x_carre, (nx, ny))
-heatmap(x_carre_matrix, title = "Heatmap of Carree solution")
+heatmap(x_carre_matrix, title = "Heatmap of Carree solution", aspect_ratio = 1)
 readline()
 
 # Comparaison Phases
@@ -346,8 +315,7 @@ p_omega = [p_carre(x, y) for (x, y) in bary_carre]
 error = volume_integrated_p_norm(p_omega, T_2_w + T_1_w - T_1_g, V_carre, Inf)
 @show error
 
-max_volume = maximum(V)
-solid_indices, fluid_indices, cut_cells_indices = get_volume_indices(V, max_volume)
+solid_indices, fluid_indices, cut_cells_indices = get_volume_indices(V)
 V_cut_cells = [V[index] for index in cut_cells_indices]
 p_omega_cut_cells = [p_omega[index] for index in cut_cells_indices]
 T_2_w_cut_cells = [T_2_w[index] for index in cut_cells_indices]
@@ -360,7 +328,7 @@ error = volume_integrated_p_norm(p_omega_cut_cells, T_2_w_cut_cells + T_1_w_cut_
 angles_deg = calculate_angles(bary, cut_cells, nx, ny, [a,b])
 
 linear_indices = [LinearIndices((nx, ny))[i] for i in cut_cells]
-diff_cut = diff[linear_indices]
+diff_cut = abs.(diff[linear_indices])
 
 scatter(angles_deg, diff_cut, xlabel="Angle (degrees)", ylabel="Diff", title="Diff vs Angle")
 readline()

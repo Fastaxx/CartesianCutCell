@@ -19,13 +19,13 @@ function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_g
 
         # Apply boundary conditions
         if cell in left_cells
-            condition = boundary_conditions["left"]
+            condition = boundary_conditions.left
         elseif cell in right_cells
-            condition = boundary_conditions["right"]
+            condition = boundary_conditions.right
         elseif cell in top_cells
-            condition = boundary_conditions["top"]
+            condition = boundary_conditions.top
         elseif cell in bottom_cells
-            condition = boundary_conditions["bottom"]
+            condition = boundary_conditions.bottom
         end
 
         if condition isa DirichletCondition
@@ -57,7 +57,7 @@ function solve_Ax_b_poisson(nx::Int, ny::Int, G, GT, Wdagger, H, V, f_omega, g_g
     end
 
     x = bicgstabl(A, b) # Solve Ax = b
-    return x,A
+    return x
 end
 
 ## Neumann Condition
@@ -95,10 +95,10 @@ using Statistics
 # Function to solve the Bloc Matrix System Neumann
 function solve_Ax_b_neumann(G, GT, Wdagger, H, HT, V, f_omega, IGamma, g_gamma)
     A = construct_block_matrix_neumann(G, GT, Wdagger, H, HT)
-    b = construct_rhs_vector_neumann(V, f_omega, IGamma, g_gamma)
-    b .-= mean(f_omega)
+    b = construct_rhs_vector_neumann(V, f_omega, IGamma, g_gamma) 
+
     # Solving the linear system
-    x = cg(A, b, maxiter=10000)
+    x = bicgstabl(A, b) 
 
     mid = length(x) ÷ 2
     # Extracting p_ω and p_γ from the solution vector

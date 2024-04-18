@@ -14,6 +14,7 @@ include("../src/solve.jl")
 include("../src/boundary.jl")
 include("../src/utils.jl")
 include("../src/mesh.jl")
+include("../src/plot.jl")
 
 mesh_step_size_list = [2., 1., 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125]
 mesh_step_size = mesh_step_size_list[2]
@@ -27,6 +28,7 @@ dx, dy = 1/nx, 1/ny
 domain = ((minimum(x), minimum(y)), (maximum(x), maximum(y)))
 circle1 = SignedDistanceFunction((x, y, _=0) -> sqrt((x-0.5)^2+(y-0.5)^2) - 0.25 , domain)
 circle2 = SignedDistanceFunction((x, y, _=0) -> sqrt((x-0.5)^2+(y-0.5)^2) - 10.0 , domain)
+barycentres = vec([(xi + dx/2, yi + dy/2) for xi in x[1:end], yi in y[1:end]])
 
 # circle 1
 values = evaluate_levelset(circle1.sdf_function, mesh)
@@ -56,7 +58,7 @@ centre_cercle = [0.5, 0.5]
 angles_deg = calculate_angles(bary, cut_cells, nx, ny, centre_cercle)
 
 function Φ(x, y)
-    return 2.0*x+2.0*y
+    return 2.0*x
 end
 
 function ∂Φ∂x(x, y)
@@ -64,7 +66,7 @@ function ∂Φ∂x(x, y)
 end
 
 function ∂Φ∂y(x, y)
-    return 2.0
+    return 0
 end
 
 # Gradient approx
@@ -89,6 +91,7 @@ grad_approx_y = grad_approx[midpoint+1:end]
 
 grad_x_matrix = reshape(grad_approx_x, ny, nx)'
 heatmap(grad_x_matrix, title = "Gradient x")
+contour!(values', levels=[0], color=:blue)
 readline()
 
 grad_y_matrix = reshape(grad_approx_y, ny, nx)'

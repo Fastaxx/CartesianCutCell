@@ -15,19 +15,28 @@ include("../src/boundary.jl")
 include("../src/utils.jl")
 include("../src/mesh.jl")
 
-## Test Poisson
-grid = CartesianGrid((360, 360) , (4.0, 4.0))
+## Test Poisson Dirichlet
+grid = CartesianGrid((80, 80) , (4.0, 4.0))
 mesh = CartesianLevelSet.generate_mesh(grid, false) # Génère un maillage
 x, y = mesh
 nx,ny = length(x), length(y)
 dx, dy = 1/nx, 1/ny 
 @show nx*ny
+barycentres = vec([(xi, yi) for xi in x[1:end], yi in y[1:end]])
 
 a,b = 2, 2
+scale_factor = 4.0 # Ajustez ce facteur pour changer la taille de l'étoile
 domain = ((minimum(x), minimum(y)), (maximum(x), maximum(y)))
 circle = SignedDistanceFunction((x, y, _=0) -> sqrt((x-a)^2+(y-b)^2) - 1 , domain)
+sdf = SignedDistanceFunction((x, y, _=0) -> begin
+    x, y = x - a, y - b # Centrer à (a, b)
+    theta = atan(y, x)
+    r = sqrt(x^2 + y^2)
+    r_star = scale_factor*(0.3 + 0.15 * cos(6 * theta))
+    return r - r_star
+end, domain)
 
-values = evaluate_levelset(circle.sdf_function, mesh)
+values = evaluate_levelset(sdf.sdf_function, mesh)
 cut_cells = CartesianLevelSet.get_cut_cells(values)
 intersection_points = get_intersection_points(values, cut_cells)
 midpoints = get_segment_midpoints(values, cut_cells, intersection_points)
@@ -37,16 +46,16 @@ cut_cells_boundary = create_boundary(cut_cells, nx, ny, 0.0)
 border_cells = get_border_cells(mesh)
 
 # Définir les conditions de bord
-boundary_conditions = Dict(
-    "left" => DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
-    "right" => DirichletCondition(0.0),  # Remplacer par la condition de bord droite
-    "top" => DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
-    "bottom" => DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
+boundary_conditions = (
+    left = DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
+    right = DirichletCondition(0.0),  # Remplacer par la condition de bord droite
+    top = DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
+    bottom = DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
 )
 
 # calculate first and second order moments
-V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(circle.sdf_function, mesh)
-w_diag, bx_diag, by_diag, border_cells_wx, border_cells_wy = calculate_second_order_moments(circle.sdf_function, mesh, bary)
+V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(sdf.sdf_function, mesh)
+w_diag, bx_diag, by_diag, border_cells_wx, border_cells_wy = calculate_second_order_moments(sdf.sdf_function, mesh, bary)
 
 # Operators Global
 Delta_x_minus, Delta_y_minus = backward_difference_matrix_sparse_2D_x(nx, ny), backward_difference_matrix_sparse_2D_y(nx, ny)
@@ -68,23 +77,23 @@ barx = bary[mid]
 
 # Forcing function
 function f_omega(x, y)
-    return 4 #4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2)
+    return pi^2*(3^2+3^2)*sin(pi*3*(x-a))*sin(pi*3*(y-b)) #4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2)
 end
 
 # Analytic solution
 function p(x, y)
-    return 1-(x-a)^2-(y-b)^2  #cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))  
+    return sin(pi*3*(x-a))*sin(pi*3*(y-b)) #1-(x-a)^2-(y-b)^2 #cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b)) 
 end
 
 f_omega_values = [f_omega(x, y) for (x, y) in bary]
 g_gamma = cut_cells_boundary
 
 # Solve
-p_omega,A = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells, boundary_conditions)
+p_omega = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, g_gamma, border_cells, boundary_conditions)
 p_omega_without_cutcells = [value for (i, value) in enumerate(p_omega) if !(i in cut_cells)]
 
 # Analytic solution
-p_true = [(x, y) in cut_cells ? 0 : (circle.sdf_function(x, y) > 0 ? 0 : p(x, y)) for (x, y) in bary]
+p_true = [(x, y) in cut_cells ? 0 : (sdf.sdf_function(x, y) > 0 ? 0 : p(x, y)) for (x, y) in bary]
 
 # Error
 diff = abs.(p_omega - p_true)
@@ -105,10 +114,10 @@ scatter(angles_deg, diff_cut, xlabel="Angle (degrees)", ylabel="Error", title="E
 readline()
 
 # Gradient of the solution
-grad_true_x = [circle.sdf_function(x, y) >= 0 ? 0 : -2*(x-a) for (x, y) in bary]
-grad_true_y = [circle.sdf_function(x, y) >= 0 ? 0 : -2*(y-b) for (x, y) in bary]
-#grad_true_x = [circle.sdf_function(x, y) >= 0 ? 0 : pi^2*(y-b)*cos(2*pi^2*(x-a)*(y-b)) for (x, y) in bary]
-#grad_true_y = [circle.sdf_function(x, y) >= 0 ? 0 : pi^2*(x-a)*cos(2*pi^2*(x-a)*(y-b)) for (x, y) in bary]
+grad_true_x = [sdf.sdf_function(x, y) >= 0 ? 0 : -2*(x-a) for (x, y) in bary]
+grad_true_y = [sdf.sdf_function(x, y) >= 0 ? 0 : -2*(y-b) for (x, y) in bary]
+#grad_true_x = [sdf.sdf_function(x, y) >= 0 ? 0 : pi^2*(y-b)*cos(2*pi^2*(x-a)*(y-b)) for (x, y) in bary]
+#grad_true_y = [sdf.sdf_function(x, y) >= 0 ? 0 : pi^2*(x-a)*cos(2*pi^2*(x-a)*(y-b)) for (x, y) in bary]
 
 grad_approx = compute_grad_operator(p_omega, p_omega, Wdagger, G, H)
 
@@ -175,3 +184,28 @@ l2_error_all_y = volume_integrated_p_norm(grad_approx_y, grad_true_y, V, 2.0)
 @show l2_error_all_x
 @show l2_error_all_y
 
+"""
+## Test Poisson Robin
+p_omega, p_gamma = solve_Ax_b_robin(G, GT, Wdagger, H, HT, Ib, Ia, v_diag, f_omega_values, IGamma, g_gamma)
+
+# Plot
+p1 = heatmap(x, y, reshape(p_omega, (nx, ny))', c = :viridis, aspect_ratio = 1, title = "Numerical solution")
+readline()
+p2 = heatmap(x, y, reshape(p_true, (nx, ny))', c = :viridis, aspect_ratio = 1, title = "Analytic solution")
+readline()
+p3 = heatmap(x, y, reshape(p_omega - p_true, (nx, ny))', c = :viridis, aspect_ratio = 1, title = "Error")
+readline()
+plot(p1, p2, p3, layout = (1, 3), size = (1200, 400))
+readline()
+
+
+## Test Poisson Neumann # Inutile problème mal posé
+# Il faut imposer une condition en plus
+
+x_neumann_w, x_neumann_g = solve_Ax_b_neumann(G, GT, Wdagger, H, HT, v_diag, f_omega_values, IGamma, g_gamma)
+@show size(x_neumann_g)
+
+x_neumann_matrix = reshape(x_neumann_w, (nx, ny))
+heatmap(x_neumann_matrix, title="Poisson Equation - Neumann BC", aspect_ratio=1)
+readline()
+"""
