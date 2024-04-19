@@ -16,16 +16,22 @@ include("../src/utils.jl")
 include("../src/mesh.jl")
 
 # Domain
-grid = CartesianGrid((80, 80) , (2.0, 2.0))
+grid = CartesianGrid((80, 80) , (4.0, 4.0))
 mesh = CartesianLevelSet.generate_mesh(grid, false) # Génère un maillage 
 x, y = mesh
 nx, ny = length(x), length(y)
 dx, dy = 1/nx, 1/ny
 @show nx*ny
 
-a,b = 1.0, 1.0
+a,b = 2.0, 2.0
 domain = ((minimum(x), minimum(y)), (maximum(x), maximum(y)))
-circle = SignedDistanceFunction((x, y, _=0) -> sqrt((x-a)^2+(y-b)^2) - 0.5 , domain)
+circle = SignedDistanceFunction((x, y, _=0) -> begin
+x, y = x - a, y - b # Centrer à (a, b)
+theta = atan(y, x)
+r = sqrt(x^2 + y^2)
+r_star = 0.5 + 0.2 * cos(5 * theta)
+return r_star - r
+end, domain)
 circle_complement = CartesianLevelSet.complement(circle)
 
 # Cut cells Circle Init:
@@ -49,10 +55,10 @@ border_cells = get_border_cells(mesh)
 
 # Définir les conditions de bord
 boundary_conditions = (
-    left = NeumannCondition(0.0),  # Remplacer par la condition de bord gauche
-    right = NeumannCondition(0.0),  # Remplacer par la condition de bord droite
-    top = NeumannCondition(0.0),  # Remplacer par la condition de bord supérieure
-    bottom = NeumannCondition(0.0)  # Remplacer par la condition de bord inférieure
+    left = DirichletCondition(0.0),  # Remplacer par la condition de bord gauche
+    right = DirichletCondition(0.0),  # Remplacer par la condition de bord droite
+    top = DirichletCondition(0.0),  # Remplacer par la condition de bord supérieure
+    bottom = DirichletCondition(0.0)  # Remplacer par la condition de bord inférieure
 )
 
 # calculate first and second order moments for the circle
@@ -220,32 +226,35 @@ g_gamma_complement = cut_cells_boundary_complement
 
 # Forcing function
 function f_omega_1(x, y)
-    return 4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
+    return 1.0 #4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
 end
 
 function f_omega_2(x, y)
-    return 4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
+    return 1.0 #4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2) 
 end
 
 f_omega_values_1 = [f_omega_1(x, y) for (x, y) in bary]
 f_omega_values_2 = [f_omega_2(x, y) for (x, y) in bary_complement]
 
 # Blocs de la matrice
-A = build_block_matrix_system2(G, GT, Wdagger, H, HT, G_complement, GT_complement, Wdagger_complement, H_complement, HT_complement)
-rhs = build_rhs_vector2(v_diag, f_omega_values_1, v_diag_complement, f_omega_values_2)
+A = build_block_matrix_system(G, GT, Wdagger, H, HT, G_complement, GT_complement, Wdagger_complement, H_complement, HT_complement)
+rhs = build_rhs_vector(v_diag, f_omega_values_1, v_diag_complement, f_omega_values_2)
 sol = solve_block_matrix_system(A, rhs, border_cells, boundary_conditions)
 
 # Extraire T_2_w, T_2_g, T_1_w, T_1_g du vecteur solution
 T_2_w = sol[1:nx*ny]
 T_1_w = sol[nx*ny+1:2*nx*ny]
 T_1_g = sol[2*nx*ny+1:3*nx*ny]
-T_2_g = sol[3*nx*ny+1:4*nx*ny]
+#T_2_w = sol[1:nx*ny]
+#T_1_w = sol[nx*ny+1:2*nx*ny]
+#T_1_g = sol[2*nx*ny+1:3*nx*ny]
+#T_2_g = sol[3*nx*ny+1:4*nx*ny]
 
 # Reshape les solutions en matrices
 T_2_matrix = reshape(T_2_w, (nx, ny))
 T_1_matrix = reshape(T_1_w, (nx, ny))
 T_1_g_matrix = reshape(T_1_g, (nx, ny))
-T_2_g_matrix = reshape(T_2_g, (nx, ny))
+#T_2_g_matrix = reshape(T_2_g, (nx, ny))
 
 # Créer les heatmaps
 p1 = heatmap(T_2_matrix, title="T_2_w", aspect_ratio=1)
@@ -254,10 +263,10 @@ p2 = heatmap(T_1_matrix, title="T_1_w", aspect_ratio=1)
 readline()
 p3 = heatmap(T_1_g_matrix, title="T_1_g", aspect_ratio=1)
 readline()
-p4 = heatmap(T_2_g_matrix, title="T_2_g", aspect_ratio=1)
-readline()
+#p4 = heatmap(T_2_g_matrix, title="T_2_g", aspect_ratio=1)
+#readline()
 
-plot(p1, p2, p3, p4, layout = (1, 4), size = (1200, 400), title = ["T_2_w" "T_1_w" "T_1_g" "T_1_g"], aspect_ratio = 1)
+plot(p1, p2, p3, layout = (1, 3), size = (1200, 400), title = ["T_2_w" "T_1_w" "T_1_g"], aspect_ratio = 1)
 readline()
 
 # Comparaison Carrée
@@ -284,12 +293,12 @@ Wdagger_carre = sparse_inverse(w_diag_carre)
 # Dirichlet boundary conditions
 # Forcing function
 function f_omega_carre(x, y)
-    return 4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2)  
+    return 4 #4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2)  
 end
 
 # Analytic solution
 function p_carre(x, y)
-    return cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))  
+    return 1-(x-a)^2-(y-b)^2
 end
 
 f_omega_values_carre = [f_omega_carre(x, y) for (x, y) in bary_carre]

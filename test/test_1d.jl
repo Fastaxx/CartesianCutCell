@@ -24,7 +24,7 @@ nx = length(x)
 dx = 1/nx
 @show nx, dx
 
-x_front = 0.01
+x_front = 0.5
 domain = ((minimum(x),), (maximum(x),))
 front = SignedDistanceFunction((x, _=0) -> x - x_front , domain)
 front_complement = CartesianLevelSet.complement(front)
@@ -38,7 +38,10 @@ midpoints = get_segment_midpoints(values, cut_cells, intersection_points)
 
 V, v_diag, bary, ax_diag, ay_diag = calculate_first_order_moments(front.sdf_function, mesh)
 w_diag, bx_diag, by_diag, border_cells_wx, border_cells_wy = calculate_second_order_moments(front.sdf_function, mesh, bary)
-
+@show v_diag
+@show ax_diag
+@show w_diag
+@show bx_diag
 # Définir les conditions de bord
 boundary_conditions = (
     left = DirichletCondition(1.0),  # Remplacer par la condition de bord gauche

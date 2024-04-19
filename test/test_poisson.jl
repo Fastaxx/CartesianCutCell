@@ -15,16 +15,22 @@ include("../src/boundary.jl")
 include("../src/utils.jl")
 include("../src/mesh.jl")
 
+nx, ny = 40, 40
+lx, ly = 4.0, 4.0
+dx, dy = lx/nx, ly/ny
+
 ## Test Poisson Dirichlet
 grid = CartesianGrid((80, 80) , (4.0, 4.0))
 mesh = CartesianLevelSet.generate_mesh(grid, false) # Génère un maillage
+mesh = ([i*dx for i in 1:nx], [j*dy for j in 1:ny])
+@show mesh
 x, y = mesh
 nx,ny = length(x), length(y)
 dx, dy = 1/nx, 1/ny 
 @show nx*ny
 barycentres = vec([(xi, yi) for xi in x[1:end], yi in y[1:end]])
 
-a,b = 2, 2
+a,b = 2.0, 2.0
 scale_factor = 4.0 # Ajustez ce facteur pour changer la taille de l'étoile
 domain = ((minimum(x), minimum(y)), (maximum(x), maximum(y)))
 circle = SignedDistanceFunction((x, y, _=0) -> sqrt((x-a)^2+(y-b)^2) - 1 , domain)
@@ -32,8 +38,8 @@ sdf = SignedDistanceFunction((x, y, _=0) -> begin
     x, y = x - a, y - b # Centrer à (a, b)
     theta = atan(y, x)
     r = sqrt(x^2 + y^2)
-    r_star = scale_factor*(0.3 + 0.15 * cos(6 * theta))
-    return r - r_star
+    r_star = scale_factor*(0.25 + 0.05 * cos(6 * theta))
+    return r_star - r
 end, domain)
 
 values = evaluate_levelset(sdf.sdf_function, mesh)
@@ -41,7 +47,7 @@ cut_cells = CartesianLevelSet.get_cut_cells(values)
 intersection_points = get_intersection_points(values, cut_cells)
 midpoints = get_segment_midpoints(values, cut_cells, intersection_points)
 
-cut_cells_boundary = create_boundary(cut_cells, nx, ny, 0.0)
+cut_cells_boundary = create_boundary(cut_cells, nx, ny, 1.0)
 
 border_cells = get_border_cells(mesh)
 
@@ -77,12 +83,18 @@ barx = bary[mid]
 
 # Forcing function
 function f_omega(x, y)
-    return pi^2*(3^2+3^2)*sin(pi*3*(x-a))*sin(pi*3*(y-b)) #4*pi^4*cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b))*((x-a)^2+(y-b)^2)
+    x, y = x - a, y - b # Centrer à (a, b)
+    r = sqrt(x^2 + y^2)
+    theta = atan(y, x)
+    return 0
 end
 
 # Analytic solution
 function p(x, y)
-    return sin(pi*3*(x-a))*sin(pi*3*(y-b)) #1-(x-a)^2-(y-b)^2 #cos(pi^2*(x-a)*(y-b))*sin(pi^2*(x-a)*(y-b)) 
+    x, y = x - a, y - b # Centrer à (a, b)
+    r = sqrt(x^2 + y^2)
+    theta = atan(y, x)
+    return r^4 * cos(3 * theta)
 end
 
 f_omega_values = [f_omega(x, y) for (x, y) in bary]
@@ -93,15 +105,30 @@ p_omega = solve_Ax_b_poisson(nx, ny, G, GT, Wdagger, H, v_diag, f_omega_values, 
 p_omega_without_cutcells = [value for (i, value) in enumerate(p_omega) if !(i in cut_cells)]
 
 # Analytic solution
-p_true = [(x, y) in cut_cells ? 0 : (sdf.sdf_function(x, y) > 0 ? 0 : p(x, y)) for (x, y) in bary]
+p_true = [(x, y) in cut_cells ? NaN : (sdf.sdf_function(x, y) > 0 ? 0 : p(x, y)) for (x, y) in bary]
 
 # Error
 diff = abs.(p_omega - p_true)
 
-# Plot
-p1 = heatmap(x, y, reshape(p_omega, (nx, ny))', c = :viridis, aspect_ratio = 1, title = "Numerical solution")
-p2 = heatmap(x, y, reshape(p_true, (nx, ny))', c = :viridis, aspect_ratio = 1, title = "Analytic solution")
-p3 = heatmap(x, y, reshape(diff, (nx, ny))', c = :viridis, aspect_ratio = 1, title = "Error")
+p_omega_reshaped = reshape(p_omega, (nx, ny))'
+p_true_reshaped = reshape(p_true, (nx, ny))'
+diff_reshaped = reshape(diff, (nx, ny))'
+
+"""
+for i in 1:nx
+    for j in 1:ny
+        if sdf.sdf_function(x[i], y[j]) > 0
+            p_omega_reshaped[j, i] = NaN
+            p_true_reshaped[j, i] = NaN
+            diff_reshaped[j, i] = NaN
+        end
+    end
+end
+"""
+
+p1 = heatmap(x, y, p_omega_reshaped, c = :viridis, aspect_ratio = 1, title = "Numerical solution")
+p2 = heatmap(x, y, p_true_reshaped, c = :viridis, aspect_ratio = 1, title = "Analytic solution")
+p3 = heatmap(x, y, diff_reshaped, c = :viridis, aspect_ratio = 1, title = "Error")
 plot(p1, p2, p3, layout = (1, 3), size = (1200, 400))
 readline()
 
@@ -183,6 +210,7 @@ l2_error_all_y = volume_integrated_p_norm(grad_approx_y, grad_true_y, V, 2.0)
 
 @show l2_error_all_x
 @show l2_error_all_y
+
 
 """
 ## Test Poisson Robin
